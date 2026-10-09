@@ -1,0 +1,38 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+.npm
+*.local
+
+# Environment variables & credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Data & Caches (heavy rasters, scratch)
+data/cache/
+data/raw/*.tif
+data/raw/*.jp2
+data/downloads/
+*.tif
+*.tiff
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp

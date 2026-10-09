@@ -1,0 +1,193 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "PB-SAN",
+      "properties": {
+        "district_id": "PB-SAN",
+        "name": "Sangrur",
+        "state": "Punjab",
+        "center": [
+          75.84,
+          30.24
+        ],
+        "bounds": [
+          75.6,
+          29.8,
+          76.15,
+          30.4
+        ],
+        "total_blocks": 8
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              76.15,
+              29.8
+            ],
+            [
+              76.15,
+              30.4
+            ],
+            [
+              75.6,
+              30.4
+            ],
+            [
+              75.6,
+              29.8
+            ],
+            [
+              76.15,
+              29.8
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "PB-LUD",
+      "properties": {
+        "district_id": "PB-LUD",
+        "name": "Ludhiana",
+        "state": "Punjab",
+        "center": [
+          75.85,
+          30.9
+        ],
+        "bounds": [
+          75.4,
+          30.6,
+          76.25,
+          31.05
+        ],
+        "total_blocks": 8
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              76.25,
+              30.6
+            ],
+            [
+              76.25,
+              31.05
+            ],
+            [
+              75.4,
+              31.05
+            ],
+            [
+              75.4,
+              30.6
+            ],
+            [
+              76.25,
+              30.6
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "PB-BAT",
+      "properties": {
+        "district_id": "PB-BAT",
+        "name": "Bathinda",
+        "state": "Punjab",
+        "center": [
+          75.0,
+          30.2
+        ],
+        "bounds": [
+          74.7,
+          29.85,
+          75.35,
+          30.45
+        ],
+        "total_blocks": 6
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.35,
+              29.85
+            ],
+            [
+              75.35,
+              30.45
+            ],
+            [
+              74.7,
+              30.45
+            ],
+            [
+              74.7,
+              29.85
+            ],
+            [
+              75.35,
+              29.85
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "PB-TTN",
+      "properties": {
+        "district_id": "PB-TTN",
+        "name": "Tarn Taran",
+        "state": "Punjab",
+        "center": [
+          74.92,
+          31.45
+        ],
+        "bounds": [
+          74.6,
+          31.1,
+          75.2,
+          31.55
+        ],
+        "total_blocks": 5
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.2,
+              31.1
+            ],
+            [
+              75.2,
+              31.55
+            ],
+            [
+              74.6,
+              31.55
+            ],
+            [
+              74.6,
+              31.1
+            ],
+            [
+              75.2,
+              31.1
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

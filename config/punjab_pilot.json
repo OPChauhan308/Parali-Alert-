@@ -1,0 +1,274 @@
+{
+  "pilot_districts": [
+    "Sangrur",
+    "Ludhiana",
+    "Bathinda",
+    "Tarn Taran"
+  ],
+  "total_units": 27,
+  "primary_focus": [
+    "Sangrur",
+    "Ludhiana"
+  ],
+  "bounding_box": [
+    74.5,
+    29.7,
+    76.3,
+    31.6
+  ],
+  "districts": {
+    "Sangrur": {
+      "district_id": "PB-SAN",
+      "state": "Punjab",
+      "bounds": [
+        75.6,
+        29.8,
+        76.15,
+        30.4
+      ],
+      "center": [
+        75.84,
+        30.24
+      ],
+      "blocks": [
+        {
+          "name": "Sangrur Central",
+          "code": "SAN-01",
+          "lat": 30.245,
+          "lon": 75.842,
+          "cropland_pct": 89.4
+        },
+        {
+          "name": "Dhuri Agro-Cluster",
+          "code": "SAN-02",
+          "lat": 30.37,
+          "lon": 75.867,
+          "cropland_pct": 91.2
+        },
+        {
+          "name": "Sunam Farmlands",
+          "code": "SAN-03",
+          "lat": 30.13,
+          "lon": 75.8,
+          "cropland_pct": 92.8
+        },
+        {
+          "name": "Bhawanigarh Sector",
+          "code": "SAN-04",
+          "lat": 30.27,
+          "lon": 76.04,
+          "cropland_pct": 88.0
+        },
+        {
+          "name": "Lehragaga Intensive Zone",
+          "code": "SAN-05",
+          "lat": 29.934,
+          "lon": 75.815,
+          "cropland_pct": 94.1
+        },
+        {
+          "name": "Moonak Border Sector",
+          "code": "SAN-06",
+          "lat": 29.82,
+          "lon": 75.89,
+          "cropland_pct": 93.5
+        },
+        {
+          "name": "Dirba Agricultural Belt",
+          "code": "SAN-07",
+          "lat": 30.065,
+          "lon": 75.98,
+          "cropland_pct": 91.0
+        },
+        {
+          "name": "Sherpur North Belt",
+          "code": "SAN-08",
+          "lat": 30.36,
+          "lon": 75.65,
+          "cropland_pct": 87.5
+        }
+      ]
+    },
+    "Ludhiana": {
+      "district_id": "PB-LUD",
+      "state": "Punjab",
+      "bounds": [
+        75.4,
+        30.6,
+        76.25,
+        31.05
+      ],
+      "center": [
+        75.85,
+        30.9
+      ],
+      "blocks": [
+        {
+          "name": "Khanna Grain Belt",
+          "code": "LUD-01",
+          "lat": 30.705,
+          "lon": 76.216,
+          "cropland_pct": 86.5
+        },
+        {
+          "name": "Samrala Agro-Zone",
+          "code": "LUD-02",
+          "lat": 30.835,
+          "lon": 76.191,
+          "cropland_pct": 88.2
+        },
+        {
+          "name": "Jagraon High-Density Zone",
+          "code": "LUD-03",
+          "lat": 30.785,
+          "lon": 75.478,
+          "cropland_pct": 92.0
+        },
+        {
+          "name": "Raikot Agricultural Sector",
+          "code": "LUD-04",
+          "lat": 30.65,
+          "lon": 75.6,
+          "cropland_pct": 90.5
+        },
+        {
+          "name": "Payal Rural Block",
+          "code": "LUD-05",
+          "lat": 30.72,
+          "lon": 76.05,
+          "cropland_pct": 87.0
+        },
+        {
+          "name": "Ludhiana East Agro-Periphery",
+          "code": "LUD-06",
+          "lat": 30.89,
+          "lon": 75.98,
+          "cropland_pct": 74.0
+        },
+        {
+          "name": "Ludhiana West Rural",
+          "code": "LUD-07",
+          "lat": 30.92,
+          "lon": 75.72,
+          "cropland_pct": 76.5
+        },
+        {
+          "name": "Sidhwan Bet Riverine Belt",
+          "code": "LUD-08",
+          "lat": 30.98,
+          "lon": 75.49,
+          "cropland_pct": 85.0
+        }
+      ]
+    },
+    "Bathinda": {
+      "district_id": "PB-BAT",
+      "state": "Punjab",
+      "bounds": [
+        74.7,
+        29.85,
+        75.35,
+        30.45
+      ],
+      "center": [
+        75.0,
+        30.2
+      ],
+      "blocks": [
+        {
+          "name": "Talwandi Sabo Intensive Zone",
+          "code": "BAT-01",
+          "lat": 29.98,
+          "lon": 75.09,
+          "cropland_pct": 92.5
+        },
+        {
+          "name": "Rampura Phul Agricultural Zone",
+          "code": "BAT-02",
+          "lat": 30.27,
+          "lon": 75.24,
+          "cropland_pct": 90.0
+        },
+        {
+          "name": "Maur Agro-Sector",
+          "code": "BAT-03",
+          "lat": 30.08,
+          "lon": 75.24,
+          "cropland_pct": 89.5
+        },
+        {
+          "name": "Bathinda Rural West",
+          "code": "BAT-04",
+          "lat": 30.21,
+          "lon": 74.95,
+          "cropland_pct": 85.0
+        },
+        {
+          "name": "Sangat South Block",
+          "code": "BAT-05",
+          "lat": 29.99,
+          "lon": 74.88,
+          "cropland_pct": 91.0
+        },
+        {
+          "name": "Bhagta Bhaika North",
+          "code": "BAT-06",
+          "lat": 30.41,
+          "lon": 75.14,
+          "cropland_pct": 88.5
+        }
+      ]
+    },
+    "Tarn Taran": {
+      "district_id": "PB-TTN",
+      "state": "Punjab",
+      "bounds": [
+        74.6,
+        31.1,
+        75.2,
+        31.55
+      ],
+      "center": [
+        74.92,
+        31.45
+      ],
+      "blocks": [
+        {
+          "name": "Tarn Taran Central",
+          "code": "TTN-01",
+          "lat": 31.45,
+          "lon": 74.925,
+          "cropland_pct": 91.0
+        },
+        {
+          "name": "Patti Early Harvest Zone",
+          "code": "TTN-02",
+          "lat": 31.28,
+          "lon": 74.86,
+          "cropland_pct": 93.0
+        },
+        {
+          "name": "Khadoor Sahib East",
+          "code": "TTN-03",
+          "lat": 31.42,
+          "lon": 75.1,
+          "cropland_pct": 89.0
+        },
+        {
+          "name": "Bhikhiwind Border Sector",
+          "code": "TTN-04",
+          "lat": 31.33,
+          "lon": 74.7,
+          "cropland_pct": 92.0
+        },
+        {
+          "name": "Chohla Sahib Riverine",
+          "code": "TTN-05",
+          "lat": 31.23,
+          "lon": 75.02,
+          "cropland_pct": 87.5
+        }
+      ]
+    }
+  }
+}

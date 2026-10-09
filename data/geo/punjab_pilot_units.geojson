@@ -1,0 +1,1139 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "SAN-01",
+      "properties": {
+        "unit_id": "SAN-01",
+        "name": "Sangrur Central",
+        "district": "Sangrur",
+        "district_id": "PB-SAN",
+        "state": "Punjab",
+        "lat": 30.245,
+        "lon": 75.842,
+        "cropland_pct": 89.4,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.797,
+              30.2
+            ],
+            [
+              75.887,
+              30.2
+            ],
+            [
+              75.887,
+              30.290000000000003
+            ],
+            [
+              75.797,
+              30.290000000000003
+            ],
+            [
+              75.797,
+              30.2
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SAN-02",
+      "properties": {
+        "unit_id": "SAN-02",
+        "name": "Dhuri Agro-Cluster",
+        "district": "Sangrur",
+        "district_id": "PB-SAN",
+        "state": "Punjab",
+        "lat": 30.37,
+        "lon": 75.867,
+        "cropland_pct": 91.2,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.822,
+              30.325
+            ],
+            [
+              75.912,
+              30.325
+            ],
+            [
+              75.912,
+              30.415000000000003
+            ],
+            [
+              75.822,
+              30.415000000000003
+            ],
+            [
+              75.822,
+              30.325
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SAN-03",
+      "properties": {
+        "unit_id": "SAN-03",
+        "name": "Sunam Farmlands",
+        "district": "Sangrur",
+        "district_id": "PB-SAN",
+        "state": "Punjab",
+        "lat": 30.13,
+        "lon": 75.8,
+        "cropland_pct": 92.8,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.755,
+              30.084999999999997
+            ],
+            [
+              75.845,
+              30.084999999999997
+            ],
+            [
+              75.845,
+              30.175
+            ],
+            [
+              75.755,
+              30.175
+            ],
+            [
+              75.755,
+              30.084999999999997
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SAN-04",
+      "properties": {
+        "unit_id": "SAN-04",
+        "name": "Bhawanigarh Sector",
+        "district": "Sangrur",
+        "district_id": "PB-SAN",
+        "state": "Punjab",
+        "lat": 30.27,
+        "lon": 76.04,
+        "cropland_pct": 88.0,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.995,
+              30.224999999999998
+            ],
+            [
+              76.08500000000001,
+              30.224999999999998
+            ],
+            [
+              76.08500000000001,
+              30.315
+            ],
+            [
+              75.995,
+              30.315
+            ],
+            [
+              75.995,
+              30.224999999999998
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SAN-05",
+      "properties": {
+        "unit_id": "SAN-05",
+        "name": "Lehragaga Intensive Zone",
+        "district": "Sangrur",
+        "district_id": "PB-SAN",
+        "state": "Punjab",
+        "lat": 29.934,
+        "lon": 75.815,
+        "cropland_pct": 94.1,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.77,
+              29.889
+            ],
+            [
+              75.86,
+              29.889
+            ],
+            [
+              75.86,
+              29.979000000000003
+            ],
+            [
+              75.77,
+              29.979000000000003
+            ],
+            [
+              75.77,
+              29.889
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SAN-06",
+      "properties": {
+        "unit_id": "SAN-06",
+        "name": "Moonak Border Sector",
+        "district": "Sangrur",
+        "district_id": "PB-SAN",
+        "state": "Punjab",
+        "lat": 29.82,
+        "lon": 75.89,
+        "cropland_pct": 93.5,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.845,
+              29.775
+            ],
+            [
+              75.935,
+              29.775
+            ],
+            [
+              75.935,
+              29.865000000000002
+            ],
+            [
+              75.845,
+              29.865000000000002
+            ],
+            [
+              75.845,
+              29.775
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SAN-07",
+      "properties": {
+        "unit_id": "SAN-07",
+        "name": "Dirba Agricultural Belt",
+        "district": "Sangrur",
+        "district_id": "PB-SAN",
+        "state": "Punjab",
+        "lat": 30.065,
+        "lon": 75.98,
+        "cropland_pct": 91.0,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.935,
+              30.02
+            ],
+            [
+              76.025,
+              30.02
+            ],
+            [
+              76.025,
+              30.110000000000003
+            ],
+            [
+              75.935,
+              30.110000000000003
+            ],
+            [
+              75.935,
+              30.02
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "SAN-08",
+      "properties": {
+        "unit_id": "SAN-08",
+        "name": "Sherpur North Belt",
+        "district": "Sangrur",
+        "district_id": "PB-SAN",
+        "state": "Punjab",
+        "lat": 30.36,
+        "lon": 75.65,
+        "cropland_pct": 87.5,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.605,
+              30.314999999999998
+            ],
+            [
+              75.69500000000001,
+              30.314999999999998
+            ],
+            [
+              75.69500000000001,
+              30.405
+            ],
+            [
+              75.605,
+              30.405
+            ],
+            [
+              75.605,
+              30.314999999999998
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "LUD-01",
+      "properties": {
+        "unit_id": "LUD-01",
+        "name": "Khanna Grain Belt",
+        "district": "Ludhiana",
+        "district_id": "PB-LUD",
+        "state": "Punjab",
+        "lat": 30.705,
+        "lon": 76.216,
+        "cropland_pct": 86.5,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              76.17099999999999,
+              30.659999999999997
+            ],
+            [
+              76.261,
+              30.659999999999997
+            ],
+            [
+              76.261,
+              30.75
+            ],
+            [
+              76.17099999999999,
+              30.75
+            ],
+            [
+              76.17099999999999,
+              30.659999999999997
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "LUD-02",
+      "properties": {
+        "unit_id": "LUD-02",
+        "name": "Samrala Agro-Zone",
+        "district": "Ludhiana",
+        "district_id": "PB-LUD",
+        "state": "Punjab",
+        "lat": 30.835,
+        "lon": 76.191,
+        "cropland_pct": 88.2,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              76.146,
+              30.79
+            ],
+            [
+              76.236,
+              30.79
+            ],
+            [
+              76.236,
+              30.880000000000003
+            ],
+            [
+              76.146,
+              30.880000000000003
+            ],
+            [
+              76.146,
+              30.79
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "LUD-03",
+      "properties": {
+        "unit_id": "LUD-03",
+        "name": "Jagraon High-Density Zone",
+        "district": "Ludhiana",
+        "district_id": "PB-LUD",
+        "state": "Punjab",
+        "lat": 30.785,
+        "lon": 75.478,
+        "cropland_pct": 92.0,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.43299999999999,
+              30.74
+            ],
+            [
+              75.523,
+              30.74
+            ],
+            [
+              75.523,
+              30.830000000000002
+            ],
+            [
+              75.43299999999999,
+              30.830000000000002
+            ],
+            [
+              75.43299999999999,
+              30.74
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "LUD-04",
+      "properties": {
+        "unit_id": "LUD-04",
+        "name": "Raikot Agricultural Sector",
+        "district": "Ludhiana",
+        "district_id": "PB-LUD",
+        "state": "Punjab",
+        "lat": 30.65,
+        "lon": 75.6,
+        "cropland_pct": 90.5,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.55499999999999,
+              30.604999999999997
+            ],
+            [
+              75.645,
+              30.604999999999997
+            ],
+            [
+              75.645,
+              30.695
+            ],
+            [
+              75.55499999999999,
+              30.695
+            ],
+            [
+              75.55499999999999,
+              30.604999999999997
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "LUD-05",
+      "properties": {
+        "unit_id": "LUD-05",
+        "name": "Payal Rural Block",
+        "district": "Ludhiana",
+        "district_id": "PB-LUD",
+        "state": "Punjab",
+        "lat": 30.72,
+        "lon": 76.05,
+        "cropland_pct": 87.0,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              76.005,
+              30.674999999999997
+            ],
+            [
+              76.095,
+              30.674999999999997
+            ],
+            [
+              76.095,
+              30.765
+            ],
+            [
+              76.005,
+              30.765
+            ],
+            [
+              76.005,
+              30.674999999999997
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "LUD-06",
+      "properties": {
+        "unit_id": "LUD-06",
+        "name": "Ludhiana East Agro-Periphery",
+        "district": "Ludhiana",
+        "district_id": "PB-LUD",
+        "state": "Punjab",
+        "lat": 30.89,
+        "lon": 75.98,
+        "cropland_pct": 74.0,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.935,
+              30.845
+            ],
+            [
+              76.025,
+              30.845
+            ],
+            [
+              76.025,
+              30.935000000000002
+            ],
+            [
+              75.935,
+              30.935000000000002
+            ],
+            [
+              75.935,
+              30.845
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "LUD-07",
+      "properties": {
+        "unit_id": "LUD-07",
+        "name": "Ludhiana West Rural",
+        "district": "Ludhiana",
+        "district_id": "PB-LUD",
+        "state": "Punjab",
+        "lat": 30.92,
+        "lon": 75.72,
+        "cropland_pct": 76.5,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.675,
+              30.875
+            ],
+            [
+              75.765,
+              30.875
+            ],
+            [
+              75.765,
+              30.965000000000003
+            ],
+            [
+              75.675,
+              30.965000000000003
+            ],
+            [
+              75.675,
+              30.875
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "LUD-08",
+      "properties": {
+        "unit_id": "LUD-08",
+        "name": "Sidhwan Bet Riverine Belt",
+        "district": "Ludhiana",
+        "district_id": "PB-LUD",
+        "state": "Punjab",
+        "lat": 30.98,
+        "lon": 75.49,
+        "cropland_pct": 85.0,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.445,
+              30.935
+            ],
+            [
+              75.535,
+              30.935
+            ],
+            [
+              75.535,
+              31.025000000000002
+            ],
+            [
+              75.445,
+              31.025000000000002
+            ],
+            [
+              75.445,
+              30.935
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "BAT-01",
+      "properties": {
+        "unit_id": "BAT-01",
+        "name": "Talwandi Sabo Intensive Zone",
+        "district": "Bathinda",
+        "district_id": "PB-BAT",
+        "state": "Punjab",
+        "lat": 29.98,
+        "lon": 75.09,
+        "cropland_pct": 92.5,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.045,
+              29.935
+            ],
+            [
+              75.135,
+              29.935
+            ],
+            [
+              75.135,
+              30.025000000000002
+            ],
+            [
+              75.045,
+              30.025000000000002
+            ],
+            [
+              75.045,
+              29.935
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "BAT-02",
+      "properties": {
+        "unit_id": "BAT-02",
+        "name": "Rampura Phul Agricultural Zone",
+        "district": "Bathinda",
+        "district_id": "PB-BAT",
+        "state": "Punjab",
+        "lat": 30.27,
+        "lon": 75.24,
+        "cropland_pct": 90.0,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.195,
+              30.224999999999998
+            ],
+            [
+              75.285,
+              30.224999999999998
+            ],
+            [
+              75.285,
+              30.315
+            ],
+            [
+              75.195,
+              30.315
+            ],
+            [
+              75.195,
+              30.224999999999998
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "BAT-03",
+      "properties": {
+        "unit_id": "BAT-03",
+        "name": "Maur Agro-Sector",
+        "district": "Bathinda",
+        "district_id": "PB-BAT",
+        "state": "Punjab",
+        "lat": 30.08,
+        "lon": 75.24,
+        "cropland_pct": 89.5,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.195,
+              30.034999999999997
+            ],
+            [
+              75.285,
+              30.034999999999997
+            ],
+            [
+              75.285,
+              30.125
+            ],
+            [
+              75.195,
+              30.125
+            ],
+            [
+              75.195,
+              30.034999999999997
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "BAT-04",
+      "properties": {
+        "unit_id": "BAT-04",
+        "name": "Bathinda Rural West",
+        "district": "Bathinda",
+        "district_id": "PB-BAT",
+        "state": "Punjab",
+        "lat": 30.21,
+        "lon": 74.95,
+        "cropland_pct": 85.0,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              74.905,
+              30.165
+            ],
+            [
+              74.995,
+              30.165
+            ],
+            [
+              74.995,
+              30.255000000000003
+            ],
+            [
+              74.905,
+              30.255000000000003
+            ],
+            [
+              74.905,
+              30.165
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "BAT-05",
+      "properties": {
+        "unit_id": "BAT-05",
+        "name": "Sangat South Block",
+        "district": "Bathinda",
+        "district_id": "PB-BAT",
+        "state": "Punjab",
+        "lat": 29.99,
+        "lon": 74.88,
+        "cropland_pct": 91.0,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              74.835,
+              29.944999999999997
+            ],
+            [
+              74.925,
+              29.944999999999997
+            ],
+            [
+              74.925,
+              30.035
+            ],
+            [
+              74.835,
+              30.035
+            ],
+            [
+              74.835,
+              29.944999999999997
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "BAT-06",
+      "properties": {
+        "unit_id": "BAT-06",
+        "name": "Bhagta Bhaika North",
+        "district": "Bathinda",
+        "district_id": "PB-BAT",
+        "state": "Punjab",
+        "lat": 30.41,
+        "lon": 75.14,
+        "cropland_pct": 88.5,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.095,
+              30.365
+            ],
+            [
+              75.185,
+              30.365
+            ],
+            [
+              75.185,
+              30.455000000000002
+            ],
+            [
+              75.095,
+              30.455000000000002
+            ],
+            [
+              75.095,
+              30.365
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "TTN-01",
+      "properties": {
+        "unit_id": "TTN-01",
+        "name": "Tarn Taran Central",
+        "district": "Tarn Taran",
+        "district_id": "PB-TTN",
+        "state": "Punjab",
+        "lat": 31.45,
+        "lon": 74.925,
+        "cropland_pct": 91.0,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              74.88,
+              31.404999999999998
+            ],
+            [
+              74.97,
+              31.404999999999998
+            ],
+            [
+              74.97,
+              31.495
+            ],
+            [
+              74.88,
+              31.495
+            ],
+            [
+              74.88,
+              31.404999999999998
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "TTN-02",
+      "properties": {
+        "unit_id": "TTN-02",
+        "name": "Patti Early Harvest Zone",
+        "district": "Tarn Taran",
+        "district_id": "PB-TTN",
+        "state": "Punjab",
+        "lat": 31.28,
+        "lon": 74.86,
+        "cropland_pct": 93.0,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              74.815,
+              31.235
+            ],
+            [
+              74.905,
+              31.235
+            ],
+            [
+              74.905,
+              31.325000000000003
+            ],
+            [
+              74.815,
+              31.325000000000003
+            ],
+            [
+              74.815,
+              31.235
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "TTN-03",
+      "properties": {
+        "unit_id": "TTN-03",
+        "name": "Khadoor Sahib East",
+        "district": "Tarn Taran",
+        "district_id": "PB-TTN",
+        "state": "Punjab",
+        "lat": 31.42,
+        "lon": 75.1,
+        "cropland_pct": 89.0,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              75.05499999999999,
+              31.375
+            ],
+            [
+              75.145,
+              31.375
+            ],
+            [
+              75.145,
+              31.465000000000003
+            ],
+            [
+              75.05499999999999,
+              31.465000000000003
+            ],
+            [
+              75.05499999999999,
+              31.375
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "TTN-04",
+      "properties": {
+        "unit_id": "TTN-04",
+        "name": "Bhikhiwind Border Sector",
+        "district": "Tarn Taran",
+        "district_id": "PB-TTN",
+        "state": "Punjab",
+        "lat": 31.33,
+        "lon": 74.7,
+        "cropland_pct": 92.0,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              74.655,
+              31.284999999999997
+            ],
+            [
+              74.745,
+              31.284999999999997
+            ],
+            [
+              74.745,
+              31.375
+            ],
+            [
+              74.655,
+              31.375
+            ],
+            [
+              74.655,
+              31.284999999999997
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "TTN-05",
+      "properties": {
+        "unit_id": "TTN-05",
+        "name": "Chohla Sahib Riverine",
+        "district": "Tarn Taran",
+        "district_id": "PB-TTN",
+        "state": "Punjab",
+        "lat": 31.23,
+        "lon": 75.02,
+        "cropland_pct": 87.5,
+        "area_sq_km": 86.3
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              74.975,
+              31.185
+            ],
+            [
+              75.065,
+              31.185
+            ],
+            [
+              75.065,
+              31.275000000000002
+            ],
+            [
+              74.975,
+              31.275000000000002
+            ],
+            [
+              74.975,
+              31.185
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}
