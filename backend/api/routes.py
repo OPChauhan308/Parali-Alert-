@@ -128,7 +128,8 @@ async def _evaluate_all_units(horizon_hours: int = 48, target_date: Optional[str
             cloud_fraction=spectral["quality_indicators"]["cloud_fraction"],
             observation_age_days=spectral["observation_age_days"],
             nearby_recent_fires_count=unit_fires_map.get(uid, {}).get("active_fires_48h", 0),
-            estimated_days_post_harvest=spectral.get("estimated_days_since_harvest")
+            estimated_days_post_harvest=spectral.get("estimated_days_since_harvest"),
+            sar_data=spectral.get("sar_radar_intelligence")
         )
 
         weather = await weather_service.fetch_forecast(lat, lon)
@@ -267,7 +268,8 @@ async def get_unit_detail(unit_id: str, horizon: int = Query(default=48, ge=24, 
         cloud_fraction=spectral["quality_indicators"]["cloud_fraction"],
         observation_age_days=spectral["observation_age_days"],
         nearby_recent_fires_count=unit_fires.get("active_fires_48h", 0),
-        estimated_days_post_harvest=spectral.get("estimated_days_since_harvest")
+        estimated_days_post_harvest=spectral.get("estimated_days_since_harvest"),
+        sar_data=spectral.get("sar_radar_intelligence")
     )
 
     consequence = air_quality_service.calculate_consequence_factor(

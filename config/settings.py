@@ -55,6 +55,20 @@ class Settings(BaseSettings):
     SENTINEL_AWS_REGION: str = "us-west-2"
     SENTINEL_MAX_CLOUD_COVER: float = 40.0
     SENTINEL_FRESHNESS_LIMIT_DAYS: int = 10
+    
+    # Novelty A: Direct Cloud-Optimized GeoTIFF (COG) HTTP Range Requests
+    COG_RANGE_REQUESTS_ENABLED: bool = True
+    COG_WINDOW_BUFFER_DEG: float = 0.015  # ~1.6km spatial bounding window around unit centroid
+    COG_PIXEL_SCALE_FACTOR: float = 10000.0  # Sentinel-2 L2A DN scaling
+    COG_TIMEOUT_SECONDS: float = 8.0
+
+    # Novelty B: Sentinel-1 C-Band SAR (Synthetic Aperture Radar) Cloud-Piercing
+    SAR_RADAR_ENABLED: bool = True
+    SAR_STAC_COLLECTION: str = "sentinel-1-grd"
+    SAR_VH_STANDING_BASELINE_DB: float = -15.5  # Typical volume scattering in vegetative paddy canopy
+    SAR_VH_HARVESTED_THRESHOLD_DB: float = -21.0  # Volume scattering collapse upon harvest
+    SAR_CROSS_RATIO_THRESHOLD_DB: float = -11.0  # Cross-ratio (VH_dB - VV_dB) indicating surface scattering
+    SAR_CLOUD_PIERCING_CONFIDENCE_MIN: float = 0.75
 
     # AWS Cloud Services
     AWS_ACCESS_KEY_ID: Optional[str] = None
