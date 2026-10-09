@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Parali Alert Serverless Cloud Pipeline
+  Scheduled agricultural pre-fire intervention intelligence on AWS.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: dev
+    Description: Deployment environment (dev, staging, prod)
+  FirmsApiKey:
+    Type: String
+    Default: ""
+    NoEcho: true
+    Description: NASA FIRMS Map Key (optional)
+
+Globals:
+  Function:
+    Timeout: 300
+    MemorySize: 1024
+    Runtime: python3.11
+
+Resources:
+  # S3 Data Lake Bucket for raw metadata, rasters, and prediction snapshots
+  ParaliAlertDataLake:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "parali-alert-data-lake-${EnvironmentName}-${AWS::AccountId}"
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: TransitionOldSnapshotsToGlacier
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 60
+                StorageClass: GLACIER
+
+  # Scheduled Pre-Fire Assessment Lambda Function
+  DailyAssessmentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../
+      Handler: backend.lambda_handler.handler
+      Description: Runs daily 48h pre-fire intervention prioritization across Punjab districts
+      Environment:
+        Variables:
+          S3_BUCKET_NAME: !Ref ParaliAlertDataLake
+          FIRMS_MAP_KEY: !Ref FirmsApiKey
+          USE_LOCAL_S3_EMULATOR: "false"
+          DATA_MODE: "live"
+          APP_ENV: !Ref EnvironmentName
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref ParaliAlertDataLake
+      Events:
+        ScheduledDailyRun:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 0 * * ? *) # 05:30 IST / 00:00 UTC daily
+            Name: ParaliAlertDailyTrigger
+            Description: Daily stubble burning risk refresh
+
+Outputs:
+  DataLakeBucket:
+    Description: S3 Data Lake Bucket Name
+    Value: !Ref ParaliAlertDataLake
+  FunctionArn:
+    Description: Lambda Function ARN
+    Value: !GetAtt DailyAssessmentFunction.Arn
