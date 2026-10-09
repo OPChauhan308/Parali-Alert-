@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-paper: #F6F5F0;
+  --bg-pure: #FFFFFF;
+  --bg-warm: #EFECE4;
+  --bg-linen: #E7E3D8;
+  
+  --border-hairline: #DCD7CC;
+  --border-strong: #181816;
+  --border-subtle: #EAE6DC;
+  
+  --ink-primary: #181816;
+  --ink-secondary: #4A473F;
+  --ink-muted: #767267;
+  --ink-faint: #A49F93;
+  
+  --c-terracotta: #991B1B;
+  --c-ochre: #B45309;
+  --c-sage: #166534;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--bg-paper);
+  color: var(--ink-primary);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Typography Classes */
+.font-editorial {
+  font-family: 'Newsreader', Georgia, serif;
+  letter-spacing: -0.015em;
+}
+
+.font-mono-tabular {
+  font-family: 'JetBrains Mono', monospace;
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+  letter-spacing: -0.02em;
+}
+
+/* Leaflet Cartographic Overrides - Light Institutional Style */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: #EAE6DC !important;
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #FFFFFF !important;
+  color: #181816 !important;
+  border: 1px solid #181816 !important;
+  border-radius: 0px !important;
+  box-shadow: 0 4px 16px rgba(24, 24, 22, 0.12) !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-content {
+  margin: 10px 14px !important;
+  line-height: 1.4 !important;
+}
+
+.leaflet-popup-tip {
+  background: #FFFFFF !important;
+}
+
+/* Crisp Active Thermal Target Animation */
+@keyframes thermal-ping {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.95;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0.95;
+  }
+}
+
+.thermal-anomaly-marker {
+  animation: thermal-ping 1.8s infinite ease-in-out;
+}

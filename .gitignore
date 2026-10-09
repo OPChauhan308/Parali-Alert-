@@ -12,6 +12,7 @@ htmlcov/
 # Node / Frontend
 node_modules/
 dist/
+!frontend/dist/
 build/
 .npm
 *.local
@@ -25,6 +26,7 @@ build/
 
 # Data & Caches (heavy rasters, scratch)
 data/cache/
+data/storage/
 data/raw/*.tif
 data/raw/*.jp2
 data/downloads/
