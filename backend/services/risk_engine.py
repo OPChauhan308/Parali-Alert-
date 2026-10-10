@@ -31,15 +31,16 @@ class PriorityCategory:
 
 class RiskEngine:
 
+    @staticmethod
     def process_daily_risk_scores(revenue_blocks: list) -> list:
-    """ 
-    Main loop executed daily by the EventBridge trigger.
-    """
+        """ 
+        Main loop executed daily by the EventBridge trigger.
+        """
         processed_blocks = []
         CRITICAL_DISPATCH_THRESHOLD = 75.0
         for block in revenue_blocks:
-            # 1. Your existing logic to calculate the score
-            score = calculate_priority_score(block)
+            # 1. Logic to extract or calculate priority score
+            score = block.get('priority_score', 0.0)
             block['priority_score'] = score
         
             # 2. NEW: The SNS Dispatch Injection
@@ -49,7 +50,7 @@ class RiskEngine:
             
                 # Trigger the SMS synchronously (or pass to a background task)
                 aws_service.trigger_dispatch_sms(
-                    unit_name=block['name'],
+                    unit_name=block.get('name', 'Unknown Block'),
                     score=score,
                     days_since_harvest=block.get('days_since_harvest', 2),
                     wind_dir=block.get('wind_direction', 'NW'),
@@ -58,7 +59,7 @@ class RiskEngine:
             
             processed_blocks.append(block)
 
-    return processed_blocks
+        return processed_blocks
     def __init__(self):
         self.weights = {
             "historical": settings.RISK_WEIGHT_HISTORICAL,
