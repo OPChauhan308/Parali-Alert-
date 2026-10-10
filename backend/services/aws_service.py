@@ -1,9 +1,9 @@
 """
-AWS S3 Integration & Local Storage Emulation Service.
+AWS S3 & SNS Integration & Local Storage Emulation Service.
 Provides:
 - Seamless S3 object storage for raw metadata, raster indices, and daily risk snapshots
 - Fully compatible local filesystem fallback (emulating S3 bucket directory tree)
-- Export of daily intervention queue dispatch sheets (CSV / GeoJSON)
+- Automated AWS SNS dispatch alerting for high-risk zones
 - Zero credentials required in local mode, full Boto3 support in AWS cloud mode
 """
 
@@ -15,7 +15,9 @@ from datetime import datetime, timezone
 import boto3
 from botocore.exceptions import ClientError
 from config.settings import settings
+import logging 
 
+logger = logging.getLogger(__name__)
 
 class AwsS3Service:
     def __init__(self):
@@ -25,11 +27,20 @@ class AwsS3Service:
         )
         self.local_base_path = Path(settings.LOCAL_STORAGE_PATH) / "s3_emulated" / self.bucket_name
         self.s3_client = None
+        self.sns_client = None
+        self.dispatch_topic_arn = getattr(settings, 'SNS_DISPATCH_TOPIC_ARN', None)
 
         if not self.use_local_emulator:
             try:
+                # Initialize both clients using the configured credentials
                 self.s3_client = boto3.client(
                     "s3",
+                    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                    region_name=settings.AWS_DEFAULT_REGION
+                )
+                self.sns_client = boto3.client(
+                    "sns",
                     aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                     aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
                     region_name=settings.AWS_DEFAULT_REGION
@@ -116,14 +127,54 @@ class AwsS3Service:
                         return json.load(f)
                 return None
 
+    def trigger_dispatch_sms(self, unit_name: str, score: float, days_since_harvest: int, wind_dir: str, phone_number: str) -> bool:
+        """
+        Publishes a highly prescriptive SMS to a specific officer via AWS SNS.
+        Includes a local emulator fallback for terminal logging during hackathon development.
+        """
+        message = (
+            f"⚠️ PARALI DISPATCH ALERT: {unit_name} | "
+            f"Priority Score: {score:.1f}/100\n"
+            f"Context: Harvested {days_since_harvest} days ago. High residue detected. "
+            f"Wind blowing {wind_dir} towards high-density airshed.\n"
+            f"ACTION: Dispatch Happy Seeder units immediately to prevent ignition."
+        )
+
+        # Local Emulator / Mock Mode
+        if self.use_local_emulator or not self.sns_client:
+            logger.info(f"\n[LOCAL MOCK SMS TRIGGERED] -> Dest: {phone_number}\nPayload:\n{message}\n")
+            return True
+
+        # Live AWS SNS Mode
+        if not self.dispatch_topic_arn:
+            logger.warning("SNS_DISPATCH_TOPIC_ARN not set. Skipping live SMS alert.")
+            return False
+
+        try:
+            response = self.sns_client.publish(
+                PhoneNumber=phone_number, 
+                Message=message,
+                MessageAttributes={
+                    'AWS.SNS.SMS.SMSType': {
+                        'DataType': 'String',
+                        'StringValue': 'Transactional' 
+                    }
+                }
+            )
+            logger.info(f"Successfully dispatched SMS for {unit_name}. MessageId: {response['MessageId']}")
+            return True
+        except ClientError as e:
+            logger.error(f"Failed to trigger SNS dispatch for {unit_name}: {str(e)}")
+            return False
+
     def get_status(self) -> Dict[str, Any]:
         return {
             "mode": "local_emulator" if self.use_local_emulator else "aws_s3_live",
             "bucket_name": self.bucket_name,
+            "sns_configured": bool(self.sns_client and self.dispatch_topic_arn),
             "aws_region": settings.AWS_DEFAULT_REGION,
             "emulator_path": str(self.local_base_path.resolve()),
             "credentials_configured": bool(settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY)
         }
-
 
 aws_service = AwsS3Service()
