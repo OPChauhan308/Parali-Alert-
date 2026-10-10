@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 import math
 from config.settings import settings
 from backend.services.state_engine import AgriculturalState
-
+from backend.services.aws_service import aws_service
 
 class PriorityCategory:
     CRITICAL_PREVENTION = "CRITICAL_PREVENTION"      # Score >= 75
@@ -30,6 +30,35 @@ class PriorityCategory:
 
 
 class RiskEngine:
+
+    def process_daily_risk_scores(revenue_blocks: list) -> list:
+    """ 
+    Main loop executed daily by the EventBridge trigger.
+    """
+        processed_blocks = []
+        CRITICAL_DISPATCH_THRESHOLD = 75.0
+        for block in revenue_blocks:
+            # 1. Your existing logic to calculate the score
+            score = calculate_priority_score(block)
+            block['priority_score'] = score
+        
+            # 2. NEW: The SNS Dispatch Injection
+            if score >= CRITICAL_DISPATCH_THRESHOLD:
+                # In a real scenario, this phone number comes from your DynamoDB block metadata
+                bdo_phone_number = block.get('officer_phone', '+919876543210') 
+            
+                # Trigger the SMS synchronously (or pass to a background task)
+                aws_service.trigger_dispatch_sms(
+                    unit_name=block['name'],
+                    score=score,
+                    days_since_harvest=block.get('days_since_harvest', 2),
+                    wind_dir=block.get('wind_direction', 'NW'),
+                    phone_number=bdo_phone_number
+                )
+            
+            processed_blocks.append(block)
+
+    return processed_blocks
     def __init__(self):
         self.weights = {
             "historical": settings.RISK_WEIGHT_HISTORICAL,
