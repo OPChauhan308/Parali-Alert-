@@ -20,6 +20,11 @@ STORAGE_DIR = DATA_DIR / "storage"
 
 
 class Settings(BaseSettings):
+    PROJECT_NAME: str = "Parali Alert"
+    # NEW: SNS Topic ARN for automated dispatch
+    SNS_DISPATCH_TOPIC_ARN: str = os.getenv("SNS_DISPATCH_TOPIC_ARN", "")
+    AWS_REGION: str = os.getenv("AWS_REGION", "ap-south-1")
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
