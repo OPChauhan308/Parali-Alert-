@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { UnitRecord, ActiveFireItem } from '../types';
-import { SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal, Layers, MapPin, Satellite, Map as MapIcon, Mountain } from 'lucide-react';
 
 interface MapViewProps {
   units: UnitRecord[];
@@ -10,6 +10,8 @@ interface MapViewProps {
   onSelectUnit: (unit: UnitRecord) => void;
   districtsGeoJson?: any;
 }
+
+type BasemapType = 'streets' | 'satellite' | 'topo';
 
 export const MapView: React.FC<MapViewProps> = ({
   units,
@@ -23,38 +25,37 @@ export const MapView: React.FC<MapViewProps> = ({
   const geojsonLayerRef = useRef<L.GeoJSON | null>(null);
   const firesLayerRef = useRef<L.LayerGroup | null>(null);
   const districtsLayerRef = useRef<L.GeoJSON | null>(null);
+  const tileLayersRef = useRef<L.Layer[]>([]);
 
-  // Layer Visibility State
+  // Basemap & Layer Visibility State
+  const [basemap, setBasemap] = useState<BasemapType>('streets');
   const [showChoropleth, setShowChoropleth] = useState(true);
   const [showFires, setShowFires] = useState(true);
   const [showDistricts, setShowDistricts] = useState(true);
   const [colorMode, setColorMode] = useState<'priority' | 'residue' | 'state'>('priority');
 
-  // District Presets
+  // District Presets with precise Punjab Coordinates
   const districtPresets = [
-    { name: 'PUNJAB REGION', center: [30.45, 75.60], zoom: 8 },
+    { name: 'PUNJAB REGION', center: [30.65, 75.35], zoom: 8 },
     { name: 'SANGRUR EPICENTER', center: [30.24, 75.84], zoom: 10 },
-    { name: 'LUDHIANA AGRO-BELT', center: [30.85, 75.80], zoom: 10 },
-    { name: 'BATHINDA SECTOR', center: [30.20, 75.05], zoom: 10 },
-    { name: 'TARN TARAN (MAJHA)', center: [31.40, 74.90], zoom: 10 },
+    { name: 'LUDHIANA AGRO-BELT', center: [30.90, 75.85], zoom: 10 },
+    { name: 'BATHINDA SECTOR', center: [30.21, 74.95], zoom: 10 },
+    { name: 'TARN TARAN (MAJHA)', center: [31.45, 74.93], zoom: 10 },
   ];
 
-  // Initialize Map with Crisp Light Institutional Cartography
+  // Initialize Map
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
-      center: [30.45, 75.60],
+      center: [30.65, 75.35],
       zoom: 8,
       zoomControl: false,
-      attributionControl: false
+      attributionControl: true
     });
 
-    // Clean unwatermarked Esri World Light Gray Base tiles
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{x}/{y}', {
-      maxZoom: 16,
-      attribution: 'Esri, HERE, Garmin, FAO, USGS, NGA'
-    }).addTo(map);
+    // Add zoom control at bottom-right
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     firesLayerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
@@ -65,6 +66,49 @@ export const MapView: React.FC<MapViewProps> = ({
     };
   }, []);
 
+  // Update Tile Layers when Basemap changes
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current;
+
+    // Remove existing tile layers
+    tileLayersRef.current.forEach(layer => layer.remove());
+    tileLayersRef.current = [];
+
+    if (basemap === 'streets') {
+      // OpenStreetMap Standard - Living Punjab road networks, canals, cities, and tehsils
+      const osmLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors'
+      }).addTo(map);
+      osmLayer.bringToBack();
+      tileLayersRef.current.push(osmLayer);
+    } else if (basemap === 'satellite') {
+      // Esri World Imagery (High-Res Aerial Farmland) + Hybrid Road/Boundary Overlay
+      const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{x}/{y}', {
+        maxZoom: 18,
+        attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics'
+      }).addTo(map);
+
+      const refLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{x}/{y}', {
+        maxZoom: 18,
+        attribution: ''
+      }).addTo(map);
+
+      satLayer.bringToBack();
+      refLayer.bringToBack();
+      tileLayersRef.current.push(satLayer, refLayer);
+    } else if (basemap === 'topo') {
+      // Esri World Topo Map (Physical relief & hydrological drainage)
+      const topoLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{x}/{y}', {
+        maxZoom: 18,
+        attribution: 'Tiles &copy; Esri, HERE, Garmin, Intermap'
+      }).addTo(map);
+      topoLayer.bringToBack();
+      tileLayersRef.current.push(topoLayer);
+    }
+  }, [basemap]);
+
   // Update District Outlines
   useEffect(() => {
     if (!mapRef.current || !districtsGeoJson) return;
@@ -74,17 +118,18 @@ export const MapView: React.FC<MapViewProps> = ({
     }
 
     if (showDistricts) {
+      const isSat = basemap === 'satellite';
       districtsLayerRef.current = L.geoJSON(districtsGeoJson, {
         style: {
-          color: '#181816',
-          weight: 1.5,
-          dashArray: '3, 4',
+          color: isSat ? '#FBBF24' : '#181816',
+          weight: 2.2,
+          dashArray: '5, 5',
           fillColor: 'transparent',
           fillOpacity: 0
         }
       }).addTo(mapRef.current);
     }
-  }, [districtsGeoJson, showDistricts]);
+  }, [districtsGeoJson, showDistricts, basemap]);
 
   // Determine Polygon Color
   const getFeatureColor = (unit: UnitRecord) => {
@@ -130,25 +175,27 @@ export const MapView: React.FC<MapViewProps> = ({
       }))
     };
 
+    const isSat = basemap === 'satellite';
+
     geojsonLayerRef.current = L.geoJSON(geoData, {
       style: (feature) => {
         const u = feature?.properties as UnitRecord;
         const isSelected = selectedUnit?.unit_id === u.unit_id;
         return {
           fillColor: getFeatureColor(u),
-          weight: isSelected ? 2.5 : 1.0,
-          opacity: 1,
-          color: isSelected ? '#181816' : '#FFFFFF',
-          fillOpacity: isSelected ? 0.75 : 0.45
+          weight: isSelected ? 3.0 : 1.4,
+          opacity: 0.9,
+          color: isSelected ? '#F59E0B' : (isSat ? '#FFFFFF' : '#292524'),
+          fillOpacity: isSelected ? 0.70 : (isSat ? 0.38 : 0.32)
         };
       },
       onEachFeature: (feature, layer) => {
         const u = feature.properties as UnitRecord;
 
         const popupContent = `
-          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 4px; min-width: 230px; color: #181816;">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 4px; min-width: 240px; color: #181816;">
             <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #181816; padding-bottom: 4px; margin-bottom: 6px;">
-              <span style="font-weight: 700; font-family: 'Newsreader', serif; font-size: 13px;">${u.name.toUpperCase()}</span>
+              <span style="font-weight: 700; font-family: 'Newsreader', serif; font-size: 14px;">${u.name.toUpperCase()}</span>
               <span style="color: #B45309; font-weight: 700;">[${u.unit_id}]</span>
             </div>
             <div style="color: #5E5B52; font-size: 10px; margin-bottom: 6px;">
@@ -171,7 +218,7 @@ export const MapView: React.FC<MapViewProps> = ({
             <div style="font-size: 10px; color: #181816; margin-bottom: 4px;">
               <strong>DISPATCH DIRECTIVE:</strong> ${u.recommended_intervention?.action_type?.replace(/_/g, ' ') || 'MONITOR'}
             </div>
-            <div style="font-size: 9px; color: #181816; text-align: right; text-transform: uppercase; font-weight: 700;">
+            <div style="font-size: 9px; color: #B45309; text-align: right; text-transform: uppercase; font-weight: 700;">
               [CLICK TO OPEN SECTOR DOSSIER]
             </div>
           </div>
@@ -186,8 +233,9 @@ export const MapView: React.FC<MapViewProps> = ({
           mouseover: (e) => {
             const l = e.target;
             l.setStyle({
-              fillOpacity: 0.85,
-              weight: 2.0
+              fillOpacity: 0.65,
+              weight: 2.2,
+              color: '#F59E0B'
             });
           },
           mouseout: (e) => {
@@ -198,7 +246,7 @@ export const MapView: React.FC<MapViewProps> = ({
         });
       }
     }).addTo(mapRef.current);
-  }, [units, selectedUnit, showChoropleth, colorMode]);
+  }, [units, selectedUnit, showChoropleth, colorMode, basemap]);
 
   // Render NASA FIRMS Active Fire Points
   useEffect(() => {
@@ -210,10 +258,10 @@ export const MapView: React.FC<MapViewProps> = ({
 
     activeFires.forEach(fire => {
       const circle = L.circleMarker([fire.latitude, fire.longitude], {
-        radius: 6,
-        fillColor: '#DC2626',
+        radius: 7,
+        fillColor: '#EF4444',
         color: '#FFFFFF',
-        weight: 1.5,
+        weight: 2.0,
         opacity: 1.0,
         fillOpacity: 0.95,
         className: 'thermal-anomaly-marker'
@@ -229,7 +277,7 @@ export const MapView: React.FC<MapViewProps> = ({
           <div>TIMESTAMP: ${fire.acq_datetime.replace('T', ' ').replace('Z', ' UTC')}</div>
           <div>INSTRUMENT: ${fire.satellite} (${fire.instrument})</div>
           <div style="margin-top: 4px; font-size: 9px; color: #991B1B; background: #FEE2E2; border: 1px solid #FCA5A5; padding: 4px; font-weight: 600;">
-            FIELD ALERT: Active stubble fire requires immediate fire-suppression response.
+            FIELD ALERT: Active stubble fire detected in orbit. Immediate fire-suppression response.
           </div>
         </div>
       `;
@@ -245,12 +293,16 @@ export const MapView: React.FC<MapViewProps> = ({
   };
 
   return (
-    <div className="relative w-full h-[620px] bg-[#EAE6DC] border border-[#DCD7CC] overflow-hidden shadow-sm">
+    <div className="relative w-full h-[660px] bg-[#EAE6DC] border border-[#DCD7CC] overflow-hidden shadow-sm">
       {/* Map Canvas */}
       <div ref={mapContainerRef} className="w-full h-full" />
 
       {/* Top Left: District Switcher Toolbar */}
-      <div className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-1 bg-[#FFFFFF] border border-[#DCD7CC] p-1 font-mono text-[10px] shadow-sm">
+      <div className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-1 bg-[#FFFFFF]/95 backdrop-blur-sm border border-[#DCD7CC] p-1 font-mono text-[10px] shadow-sm">
+        <div className="flex items-center gap-1 px-2 py-1 text-[#767267] font-bold border-r border-[#DCD7CC] mr-0.5">
+          <MapPin className="w-3 h-3 text-[#181816]" />
+          <span>PILOT:</span>
+        </div>
         {districtPresets.map((p) => (
           <button
             key={p.name}
@@ -262,19 +314,63 @@ export const MapView: React.FC<MapViewProps> = ({
         ))}
       </div>
 
+      {/* Top Center: Real Basemap Layer Switcher */}
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 hidden sm:flex items-center gap-1 bg-[#FFFFFF]/95 backdrop-blur-sm border border-[#DCD7CC] p-1 font-mono text-[10px] shadow-sm">
+        <div className="flex items-center gap-1 px-2 py-1 text-[#767267] font-bold border-r border-[#DCD7CC] mr-0.5">
+          <Layers className="w-3 h-3 text-[#181816]" />
+          <span>MAP:</span>
+        </div>
+        <button
+          onClick={() => setBasemap('streets')}
+          className={`flex items-center gap-1.5 px-3 py-1 font-bold transition ${
+            basemap === 'streets'
+              ? 'bg-[#181816] text-[#F6F5F0]'
+              : 'text-[#4A473F] hover:text-[#181816] hover:bg-[#F6F5F0]'
+          }`}
+          title="OpenStreetMap Standard Cartography (Highways, Canals, Cities)"
+        >
+          <MapIcon className="w-3 h-3" />
+          <span>STREETS</span>
+        </button>
+        <button
+          onClick={() => setBasemap('satellite')}
+          className={`flex items-center gap-1.5 px-3 py-1 font-bold transition ${
+            basemap === 'satellite'
+              ? 'bg-[#181816] text-[#F6F5F0]'
+              : 'text-[#4A473F] hover:text-[#181816] hover:bg-[#F6F5F0]'
+          }`}
+          title="Esri World Imagery + Highway/Settlement Overlay"
+        >
+          <Satellite className="w-3 h-3" />
+          <span>SATELLITE</span>
+        </button>
+        <button
+          onClick={() => setBasemap('topo')}
+          className={`flex items-center gap-1.5 px-3 py-1 font-bold transition ${
+            basemap === 'topo'
+              ? 'bg-[#181816] text-[#F6F5F0]'
+              : 'text-[#4A473F] hover:text-[#181816] hover:bg-[#F6F5F0]'
+          }`}
+          title="Esri Topographic & Drainage Terrain"
+        >
+          <Mountain className="w-3 h-3" />
+          <span>TOPO</span>
+        </button>
+      </div>
+
       {/* Top Right: Layer & Metric Selectors */}
       <div className="absolute top-3 right-3 z-20 flex flex-col gap-2 font-mono text-[11px]">
         {/* Layer Checkboxes */}
-        <div className="bg-[#FFFFFF] border border-[#DCD7CC] p-3 flex flex-col gap-2 min-w-[190px] shadow-sm">
+        <div className="bg-[#FFFFFF]/95 backdrop-blur-sm border border-[#DCD7CC] p-3 flex flex-col gap-2 min-w-[190px] shadow-sm">
           <div className="text-[10px] text-[#767267] uppercase tracking-wider font-bold border-b border-[#DCD7CC] pb-1 flex items-center justify-between">
-            <span>MAP LAYERS</span>
+            <span>DATA LAYERS</span>
             <SlidersHorizontal className="w-3 h-3 text-[#181816]" />
           </div>
 
           <label className="flex items-center justify-between text-[#181816] cursor-pointer hover:text-[#000000] font-semibold text-[11px]">
             <span className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 bg-[#D97706]"></span>
-              Risk Polygons
+              Intervention Polygons
             </span>
             <input
               type="checkbox"
@@ -287,7 +383,7 @@ export const MapView: React.FC<MapViewProps> = ({
           <label className="flex items-center justify-between text-[#181816] cursor-pointer hover:text-[#000000] font-semibold text-[11px]">
             <span className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#DC2626]"></span>
-              FIRMS Active ({activeFires.length})
+              FIRMS Thermal ({activeFires.length})
             </span>
             <input
               type="checkbox"
@@ -298,7 +394,7 @@ export const MapView: React.FC<MapViewProps> = ({
           </label>
 
           <label className="flex items-center justify-between text-[#5E5B52] cursor-pointer hover:text-[#181816] text-[11px]">
-            <span>District Borders</span>
+            <span>District Perimeters</span>
             <input
               type="checkbox"
               checked={showDistricts}
@@ -309,7 +405,7 @@ export const MapView: React.FC<MapViewProps> = ({
         </div>
 
         {/* Metric Mode Switcher */}
-        <div className="bg-[#FFFFFF] border border-[#DCD7CC] p-1 flex items-center gap-1 text-[10px] shadow-sm">
+        <div className="bg-[#FFFFFF]/95 backdrop-blur-sm border border-[#DCD7CC] p-1 flex items-center gap-1 text-[10px] shadow-sm">
           <button
             onClick={() => setColorMode('priority')}
             className={`px-2.5 py-1 font-bold transition ${
@@ -338,9 +434,10 @@ export const MapView: React.FC<MapViewProps> = ({
       </div>
 
       {/* Bottom Left: Legend */}
-      <div className="absolute bottom-3 left-3 z-20 bg-[#FFFFFF] border border-[#DCD7CC] p-3 font-mono text-[10px] shadow-sm">
-        <div className="text-[#767267] uppercase font-bold mb-2 tracking-wider border-b border-[#DCD7CC] pb-1">
-          {colorMode === 'priority' ? 'PRIORITY SCALE' : colorMode === 'residue' ? 'RESIDUE DENSITY' : 'FIELD STATE'}
+      <div className="absolute bottom-3 left-3 z-20 bg-[#FFFFFF]/95 backdrop-blur-sm border border-[#DCD7CC] p-3 font-mono text-[10px] shadow-sm max-w-[270px]">
+        <div className="text-[#767267] uppercase font-bold mb-2 tracking-wider border-b border-[#DCD7CC] pb-1 flex items-center justify-between">
+          <span>{colorMode === 'priority' ? 'INTERVENTION PRIORITY' : colorMode === 'residue' ? 'RESIDUE DENSITY' : 'FIELD STATE'}</span>
+          <span className="text-[9px] text-[#B45309] font-bold">LIVE</span>
         </div>
         {colorMode === 'priority' && (
           <div className="flex flex-col gap-1.5 font-semibold text-[#181816]">
@@ -350,7 +447,7 @@ export const MapView: React.FC<MapViewProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 bg-[#D97706]"></span>
-              <span>55–74 HIGH OUTREACH</span>
+              <span>55–74 HIGH HARVEST OUTREACH</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 bg-[#78716C]"></span>
@@ -358,21 +455,53 @@ export const MapView: React.FC<MapViewProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 bg-[#15803D]"></span>
-              <span>&lt; 35 LOW RISK</span>
+              <span>&lt; 35 LOW RISK / STABLE</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#DC2626] animate-pulse"></span>
+              <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444] animate-pulse"></span>
               <span>ACTIVE THERMAL ANOMALY (FIRMS)</span>
+            </div>
+          </div>
+        )}
+        {colorMode === 'residue' && (
+          <div className="flex flex-col gap-1.5 font-semibold text-[#181816]">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 bg-[#15803D]"></span>
+              <span>&ge; 70 HIGH EX-SITU OPPORTUNITY</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 bg-[#D97706]"></span>
+              <span>45–69 MODERATE AGGREGATION</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 bg-[#78716C]"></span>
+              <span>&lt; 45 LOW POTENTIAL</span>
+            </div>
+          </div>
+        )}
+        {colorMode === 'state' && (
+          <div className="flex flex-col gap-1.5 font-semibold text-[#181816]">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 bg-[#15803D]"></span>
+              <span>STANDING CROP (PRE-HARVEST)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 bg-[#D97706]"></span>
+              <span>RECENTLY HARVESTED (STUBBLE RISK)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 bg-[#DC2626]"></span>
+              <span>POSSIBLY BURNED (POST-FIRE SCAR)</span>
             </div>
           </div>
         )}
       </div>
 
-      {/* Bottom Right: Coordinate / Institutional Attribution */}
-      <div className="absolute bottom-3 right-3 z-20 hidden md:flex items-center gap-2 bg-[#FFFFFF]/90 border border-[#DCD7CC] px-3 py-1 text-[10px] text-[#5E5B52] font-mono shadow-sm">
-        <span>EPSG:4326</span>
+      {/* Bottom Center: Current Cartography Notice */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 hidden md:flex items-center gap-2 bg-[#FFFFFF]/90 backdrop-blur-sm border border-[#DCD7CC] px-3 py-1 text-[10px] text-[#5E5B52] font-mono shadow-sm">
+        <span className="font-bold text-[#181816]">{basemap.toUpperCase()}</span>
         <span>•</span>
-        <span>PUNJAB CARTOGRAPHIC DISPATCH GRID</span>
+        <span>PUNJAB REVENUE BLOCKS (SANGRUR, LUDHIANA, BATHINDA, TARN TARAN)</span>
       </div>
     </div>
   );
