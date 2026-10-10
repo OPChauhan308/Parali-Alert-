@@ -79,6 +79,7 @@ class UnitEvaluationRecord(BaseModel):
 class RiskRankingsResponse(BaseModel):
     horizon_hours: int
     total_evaluated: int
+    total_returned: int = 0
     data_mode: str
     refreshed_at: str
     summary_stats: Dict[str, Any]
@@ -109,3 +110,41 @@ class HistoricalReplayResponse(BaseModel):
     cutoff_timestamp: str
     total_evaluated: int
     rankings: List[UnitEvaluationRecord]
+
+
+class WhatsAppAlertRequest(BaseModel):
+    unit_id: str
+    recipient_phone: Optional[str] = None
+    recipient_name: Optional[str] = "Block Development Officer"
+    language: str = "en"  # "en" or "pa"
+
+
+class WhatsAppAlertResponse(BaseModel):
+    success: bool
+    dispatch: Dict[str, Any]
+    formatted_message: Dict[str, Any]
+
+
+class FarmerReportRequest(BaseModel):
+    farmer_name: str
+    phone: str
+    district: str
+    unit_id: str
+    village: str
+    land_area_acres: float = 5.0
+    crop_type: str = "Paddy (PR-126)"
+    harvest_status: str = "HARVESTED_YESTERDAY"
+    harvest_date: Optional[str] = None
+    residue_action: str = "SUPER_SEEDER_NEEDED"
+    machinery_requested: bool = True
+    notes: Optional[str] = ""
+
+
+class FarmerReportResponse(BaseModel):
+    report_id: str
+    farmer_name: str
+    district: str
+    unit_id: str
+    submitted_at: str
+    status: str = "RECEIVED"
+

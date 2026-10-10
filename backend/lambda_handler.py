@@ -4,6 +4,7 @@ Triggered on a schedule by Amazon EventBridge (e.g., daily at 05:30 IST / 00:00 
 to run the pre-fire intervention intelligence pipeline and persist results to Amazon S3.
 """
 
+import asyncio
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,6 +15,50 @@ from backend.services.firms_service import firms_service
 from backend.services.air_quality_service import air_quality_service
 from backend.services.risk_engine import risk_engine
 from backend.services.aws_service import aws_service
+
+
+async def _run_assessment(units):
+    active_fires = await firms_service.fetch_active_fires()
+    unit_fires_map = firms_service.aggregate_fires_to_units(active_fires, units)
+
+    async def _process_unit(u):
+        props = u["properties"]
+        uid = props["unit_id"]
+        lat = props["lat"]
+        lon = props["lon"]
+
+        spectral = satellite_service.get_unit_spectral_observation(uid, lat, lon)
+        state_res = transition_model.evaluate_state(
+            current_ndvi=spectral["spectral_indices"]["current_ndvi"],
+            baseline_ndvi=spectral["spectral_indices"]["baseline_ndvi"],
+            current_ndti=spectral["spectral_indices"]["current_ndti"],
+            cloud_fraction=spectral["quality_indicators"]["cloud_fraction"],
+            observation_age_days=spectral["observation_age_days"]
+        )
+
+        weather = await weather_service.fetch_forecast(lat, lon)
+        wind_dir = weather.get("horizon_48h", {}).get("prevailing_wind_direction_deg", 315.0)
+        wind_spd = weather.get("horizon_48h", {}).get("avg_wind_speed_kmh", 12.0)
+
+        consequence = air_quality_service.calculate_consequence_factor(
+            source_lat=lat,
+            source_lon=lon,
+            wind_from_deg=wind_dir,
+            wind_speed_kmh=wind_spd
+        )
+
+        unit_fires = unit_fires_map.get(uid, {})
+        return risk_engine.evaluate_unit(
+            unit=u,
+            spectral_obs=spectral,
+            state_result=state_res,
+            fire_summary=unit_fires,
+            weather_data=weather,
+            consequence_data=consequence,
+            horizon_hours=48
+        )
+
+    return await asyncio.gather(*[_process_unit(u) for u in units])
 
 
 def handler(event, context):
@@ -30,52 +75,7 @@ def handler(event, context):
 
     units = units_geojson.get("features", [])
 
-    # Ingest fires
-    # (In Lambda, async loop can be run or sync wrapper used)
-    import asyncio
-    loop = asyncio.get_event_loop()
-
-    active_fires = loop.run_until_complete(firms_service.fetch_active_fires())
-    unit_fires_map = firms_service.aggregate_fires_to_units(active_fires, units)
-
-    results = []
-    for u in units:
-        props = u["properties"]
-        uid = props["unit_id"]
-        lat = props["lat"]
-        lon = props["lon"]
-
-        spectral = satellite_service.get_unit_spectral_observation(uid, lat, lon)
-        state_res = transition_model.evaluate_state(
-            current_ndvi=spectral["spectral_indices"]["current_ndvi"],
-            baseline_ndvi=spectral["spectral_indices"]["baseline_ndvi"],
-            current_ndti=spectral["spectral_indices"]["current_ndti"],
-            cloud_fraction=spectral["quality_indicators"]["cloud_fraction"],
-            observation_age_days=spectral["observation_age_days"]
-        )
-
-        weather = loop.run_until_complete(weather_service.fetch_forecast(lat, lon))
-        wind_dir = weather.get("horizon_48h", {}).get("prevailing_wind_direction_deg", 315.0)
-        wind_spd = weather.get("horizon_48h", {}).get("avg_wind_speed_kmh", 12.0)
-
-        consequence = air_quality_service.calculate_consequence_factor(
-            source_lat=lat,
-            source_lon=lon,
-            wind_from_deg=wind_dir,
-            wind_speed_kmh=wind_spd
-        )
-
-        unit_fires = unit_fires_map.get(uid, {})
-        eval_result = risk_engine.evaluate_unit(
-            unit=u,
-            spectral_obs=spectral,
-            state_result=state_res,
-            fire_summary=unit_fires,
-            weather_data=weather,
-            consequence_data=consequence,
-            horizon_hours=48
-        )
-        results.append(eval_result)
+    results = asyncio.run(_run_assessment(units))
 
     # Sort priority queue
     results_sorted = sorted(results, key=lambda x: x["priority_score"], reverse=True)

@@ -51,7 +51,7 @@ class Sentinel1SarService:
         # Deterministic seed based on unit_id and date for consistent physical telemetry
         seed_str = f"{unit_id}_{target_date or 'latest'}"
         seed = sum(ord(c) for c in seed_str)
-        np.random.seed(seed)
+        rng = np.random.default_rng(seed)
 
         now = datetime.now(timezone.utc)
         obs_dt = now - timedelta(days=float((seed % 3) + 0.8))
@@ -65,28 +65,28 @@ class Sentinel1SarService:
 
         if profile_type == 0:
             # Standing Crop: Erect paddy stalks create strong volume scattering
-            vh_db = round(self.vh_baseline_db + np.random.uniform(-0.8, 1.2), 2)  # ~ -15.0 dB
-            vv_db = round(vh_db + 7.5 + np.random.uniform(-0.5, 0.8), 2)          # ~ -7.5 dB
+            vh_db = round(self.vh_baseline_db + rng.uniform(-0.8, 1.2), 2)  # ~ -15.0 dB
+            vv_db = round(vh_db + 7.5 + rng.uniform(-0.5, 0.8), 2)          # ~ -7.5 dB
             cr_db = round(vh_db - vv_db, 2)                                       # ~ -7.5 dB
             volume_scattering_status = "INTACT_CANOPY_VOLUME_SCATTERING"
             sar_state = "STANDING_CROP"
-            stalk_depletion_pct = round(np.random.uniform(2.0, 10.0), 1)
+            stalk_depletion_pct = round(rng.uniform(2.0, 10.0), 1)
         elif profile_type in (1, 2, 3, 5):
             # Harvested Stubble: Stalks cut, canopy collapsed; surface scattering dominates
-            vh_db = round(self.vh_harvested_threshold_db + np.random.uniform(-1.8, 0.4), 2)  # ~ -22.5 dB
-            vv_db = round(vh_db + 10.5 + np.random.uniform(-0.6, 0.6), 2)                    # ~ -12.0 dB
-            cr_db = round(vh_db - vv_db, 2)                                                  # ~ -12.5 dB
+            vh_db = round(self.vh_harvested_threshold_db + rng.uniform(-1.8, 0.4), 2)  # ~ -22.5 dB
+            vv_db = round(vh_db + 11.8 + rng.uniform(-0.4, 0.4), 2)                    # ~ -10.7 dB
+            cr_db = round(vh_db - vv_db, 2)                                                  # ~ -11.8 dB
             volume_scattering_status = "CANOPY_COLLAPSE_SURFACE_SCATTERING"
             sar_state = "RECENTLY_HARVESTED"
-            stalk_depletion_pct = round(np.random.uniform(75.0, 95.0), 1)
+            stalk_depletion_pct = round(rng.uniform(75.0, 95.0), 1)
         else:
             # Burned / Tilled: Flattened charred soil
-            vh_db = round(-24.5 + np.random.uniform(-1.0, 0.5), 2)
-            vv_db = round(-13.8 + np.random.uniform(-0.8, 0.6), 2)
+            vh_db = round(settings.SAR_BURNED_VH_DB + rng.uniform(-1.0, 0.5), 2)
+            vv_db = round(settings.SAR_BURNED_VV_DB + rng.uniform(-0.8, 0.6), 2)
             cr_db = round(vh_db - vv_db, 2)
             volume_scattering_status = "TOTAL_DIELECTRIC_SURFACE_ATTENUATION"
             sar_state = "POSSIBLY_BURNED"
-            stalk_depletion_pct = round(np.random.uniform(90.0, 99.0), 1)
+            stalk_depletion_pct = round(rng.uniform(90.0, 99.0), 1)
 
         # SAR Harvest Transition Index (SHTI)
         # SHTI = (VH_baseline - VH_current) / |VH_baseline|
@@ -111,7 +111,9 @@ class Sentinel1SarService:
             },
             "sar_inferred_state": sar_state,
             "all_weather_penetrability": "100% (CLOUDS, FOG & SMOKE PIERCED)",
-            "radar_confidence_score": round(0.88 + np.random.uniform(0.02, 0.08), 2)
+            "radar_confidence_score": round(0.88 + rng.uniform(0.02, 0.08), 2),
+            "data_provenance": "Sentinel-1 IW GRD Radar Model",
+            "is_simulated": settings.DATA_MODE == "sample"
         }
 
     def evaluate_cloud_piercing_and_fusion(
@@ -161,19 +163,19 @@ class Sentinel1SarService:
 
             if optical_residue_detected and sar_residue_detected:
                 fusion_status = "DUAL_SENSOR_CONFIRMED_RESIDUE"
-                fused_confidence = 96.0
+                fused_confidence = settings.FUSION_CONF_DUAL_RESIDUE
                 fusion_desc = "Dual-sensor agreement: Optical NDTI (cellulose absorption) and Sentinel-1 SAR (canopy collapse) jointly verify dry stubble presence."
             elif optical_residue_detected and not sar_residue_detected:
                 fusion_status = "OPTICAL_ONLY_RESIDUE"
-                fused_confidence = 72.0
+                fused_confidence = settings.FUSION_CONF_OPTICAL_ONLY
                 fusion_desc = "Optical indicates residue; SAR shows partial canopy standing. Possible lodging or partial harvest."
             elif not optical_residue_detected and sar_residue_detected:
                 fusion_status = "SAR_VOLUME_COLLAPSE_ONLY"
-                fused_confidence = 78.0
+                fused_confidence = settings.FUSION_CONF_SAR_ONLY
                 fusion_desc = "SAR shows canopy removal; low optical NDTI suggests plowed soil, raked straw, or early tillage."
             else:
                 fusion_status = "DUAL_SENSOR_STANDING_CANOPY"
-                fused_confidence = 94.0
+                fused_confidence = settings.FUSION_CONF_DUAL_STANDING
                 fusion_desc = "Both optical NDVI and SAR volume scattering confirm healthy standing paddy."
 
             return {

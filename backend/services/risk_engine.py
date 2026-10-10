@@ -13,7 +13,7 @@ Produces:
 - Rule-based operational recommendations (CRM machinery dispatch, baler clusters, ground verification)
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime, timezone
 import math
 from config.settings import settings
@@ -30,6 +30,15 @@ class PriorityCategory:
 
 
 class RiskEngine:
+    def __init__(self):
+        self.weights = {
+            "historical": settings.RISK_WEIGHT_HISTORICAL,
+            "recent_fires": settings.RISK_WEIGHT_RECENT_FIRES,
+            "harvest_recency": settings.RISK_WEIGHT_HARVEST_RECENCY,
+            "residue_index": settings.RISK_WEIGHT_RESIDUE_INDEX,
+            "weather": settings.RISK_WEIGHT_WEATHER,
+            "crop_calendar": settings.RISK_WEIGHT_CROP_CALENDAR,
+        }
 
     @staticmethod
     def process_daily_risk_scores(revenue_blocks: list) -> list:
@@ -37,16 +46,15 @@ class RiskEngine:
         Main loop executed daily by the EventBridge trigger.
         """
         processed_blocks = []
-        CRITICAL_DISPATCH_THRESHOLD = 75.0
+        critical_threshold = settings.CRITICAL_DISPATCH_THRESHOLD
         for block in revenue_blocks:
             # 1. Logic to extract or calculate priority score
             score = block.get('priority_score', 0.0)
             block['priority_score'] = score
         
-            # 2. NEW: The SNS Dispatch Injection
-            if score >= CRITICAL_DISPATCH_THRESHOLD:
-                # In a real scenario, this phone number comes from your DynamoDB block metadata
-                bdo_phone_number = block.get('officer_phone', '+919876543210') 
+            # 2. Automated SNS Dispatch with configured fallback phone
+            if score >= critical_threshold:
+                bdo_phone_number = block.get('officer_phone') or settings.DEFAULT_OFFICER_PHONE
             
                 # Trigger the SMS synchronously (or pass to a background task)
                 aws_service.trigger_dispatch_sms(
@@ -60,15 +68,6 @@ class RiskEngine:
             processed_blocks.append(block)
 
         return processed_blocks
-    def __init__(self):
-        self.weights = {
-            "historical": settings.RISK_WEIGHT_HISTORICAL,
-            "recent_fires": settings.RISK_WEIGHT_RECENT_FIRES,
-            "harvest_recency": settings.RISK_WEIGHT_HARVEST_RECENCY,
-            "residue_index": settings.RISK_WEIGHT_RESIDUE_INDEX,
-            "weather": settings.RISK_WEIGHT_WEATHER,
-            "crop_calendar": settings.RISK_WEIGHT_CROP_CALENDAR,
-        }
 
     def evaluate_unit(
         self,
@@ -78,17 +77,33 @@ class RiskEngine:
         fire_summary: Dict[str, Any],
         weather_data: Dict[str, Any],
         consequence_data: Dict[str, Any],
-        horizon_hours: int = 48
+        horizon_hours: int = 48,
+        farmer_ground_truth: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Evaluates a single administrative unit across 24h or 48h horizon.
+        Incorporates satellite remote sensing, weather, and farmer ground-truth self-reporting.
         """
         props = unit["properties"]
         unit_id = props["unit_id"]
         unit_name = props["name"]
         district = props["district"]
-        cropland_pct = props.get("cropland_pct", 88.0)
-        area_sq_km = props.get("area_sq_km", 64.0)
+        cropland_pct = props.get("cropland_pct", settings.DEFAULT_CROPLAND_PCT)
+        area_sq_km = props.get("area_sq_km", settings.DEFAULT_UNIT_AREA_SQ_KM)
+
+        # Retrieve farmer ground-truth calibration if not explicitly supplied
+        if farmer_ground_truth is None:
+            try:
+                from backend.services.farmer_service import farmer_service
+                farmer_ground_truth = farmer_service.get_unit_ground_truth(unit_id)
+            except Exception:
+                farmer_ground_truth = {
+                    "has_ground_truth": False,
+                    "reports_count": 0,
+                    "confidence_boost": 0.0,
+                    "machinery_demands": 0,
+                    "harvested_confirmations": 0
+                }
 
         # Weather horizon choice
         weather_horizon = weather_data.get(f"horizon_{horizon_hours}h", weather_data.get("horizon_48h", {}))
@@ -104,6 +119,11 @@ class RiskEngine:
         obs_age_days = spectral_obs["observation_age_days"]
         current_ndti = spectral_obs["spectral_indices"]["current_ndti"]
         days_since_harvest = state_result.get("days_since_harvest")
+
+        # Calibrate harvest status using farmer ground truth
+        if farmer_ground_truth and farmer_ground_truth.get("has_ground_truth"):
+            if farmer_ground_truth.get("harvested_confirmations", 0) > 0 and (days_since_harvest is None or days_since_harvest > 4.0):
+                days_since_harvest = 2.0  # Confirmed recent harvest by local farmers
 
         # -------------------------------------------------------------
         # STEP 1: Estimate residue_opportunity (0.0 to 1.0)
@@ -131,8 +151,21 @@ class RiskEngine:
             days_since_harvest=days_since_harvest,
             current_ndti=current_ndti,
             fire_weather_index=fire_weather_index,
-            state=state
+            state=state,
+            target_date=spectral_obs.get("observation_datetime")
         )
+
+        # Incorporate farmer ground-truth demand factor if reports exist
+        if farmer_ground_truth and farmer_ground_truth.get("has_ground_truth"):
+            machinery_reqs = farmer_ground_truth.get("machinery_demands", 0)
+            if machinery_reqs > 0:
+                risk_factors.append({
+                    "factor_name": "Farmer Ground-Truth CRM Demand",
+                    "raw_value": 0.90,
+                    "weight": 0.15,
+                    "weighted_contribution": round(0.90 * 0.15, 3),
+                    "description": f"Verified field ground-truth: {machinery_reqs} Super Seeder/Baler demand ticket(s) submitted by village farmers."
+                })
 
         # -------------------------------------------------------------
         # STEP 3: Estimate intervention_opportunity (0.0 to 1.0)
@@ -157,11 +190,14 @@ class RiskEngine:
         # Active Fire Override: If fires are actively detected right now in the unit,
         # it is NOT a pre-fire prevention opportunity; it's an operational fire response.
         is_active_fire = (fires_24h > 0 or fires_48h > 0)
-        is_severely_uncertain = (cloud_fraction > 0.50 or obs_age_days > 12)
+        is_severely_uncertain = (
+            cloud_fraction > settings.UNCERTAINTY_CLOUD_FRACTION_THRESHOLD or
+            obs_age_days > settings.UNCERTAINTY_OBS_AGE_DAYS_THRESHOLD
+        )
 
         if is_active_fire:
             priority_cat = PriorityCategory.OBSERVED_FIRE_DISPATCH
-            priority_score = round(min(100.0, 80.0 + (fires_24h * 5.0)), 1)
+            priority_score = round(min(100.0, settings.ACTIVE_FIRE_BASE_PRIORITY + (fires_24h * settings.ACTIVE_FIRE_MULTIPLIER)), 1)
         elif is_severely_uncertain:
             priority_cat = PriorityCategory.UNCERTAIN_VERIFICATION
             priority_score = round(fire_risk * 45.0, 1)
@@ -173,21 +209,28 @@ class RiskEngine:
             ) * 100.0
             priority_score = round(min(100.0, max(0.0, raw_priority)), 1)
 
-            if priority_score >= 75.0:
+            # Ground-truth elevation: if farmers reported urgent machine need, elevate priority score
+            if farmer_ground_truth and farmer_ground_truth.get("has_ground_truth"):
+                req_boost = min(15.0, farmer_ground_truth.get("machinery_demands", 0) * 5.0)
+                priority_score = round(min(100.0, priority_score + req_boost), 1)
+
+            if priority_score >= settings.PRIORITY_THRESHOLD_CRITICAL:
                 priority_cat = PriorityCategory.CRITICAL_PREVENTION
-            elif priority_score >= 55.0:
+            elif priority_score >= settings.PRIORITY_THRESHOLD_HIGH:
                 priority_cat = PriorityCategory.HIGH_PREVENTION
-            elif priority_score >= 35.0:
+            elif priority_score >= settings.PRIORITY_THRESHOLD_MEDIUM:
                 priority_cat = PriorityCategory.MEDIUM_MONITORING
             else:
                 priority_cat = PriorityCategory.LOW_RISK
 
-        # Data Freshness & Quality
+        # Data Freshness & Quality (boosted by ground truth confirmation)
         evidence_quality, missing_warnings = self._evaluate_evidence_quality(
             cloud_fraction=cloud_fraction,
             obs_age_days=obs_age_days,
             is_weather_live=weather_data.get("is_live", False)
         )
+        if farmer_ground_truth and farmer_ground_truth.get("has_ground_truth"):
+            evidence_quality = min(1.0, evidence_quality + farmer_ground_truth.get("confidence_boost", 0.10))
 
         # Rule-Based Operational Recommendations
         recommendation = self._generate_recommendation(
@@ -202,6 +245,13 @@ class RiskEngine:
             unit_name=unit_name,
             district=district
         )
+
+        if farmer_ground_truth and farmer_ground_truth.get("machinery_demands", 0) > 0:
+            recommendation["operational_guidance"] += (
+                f" Field ground-truth validated: {farmer_ground_truth['machinery_demands']} Super Seeder "
+                f"ticket(s) pending for immediate dispatch."
+            )
+            recommendation["urgency"] = "IMMEDIATE"
 
         # Top 3 Contributing Risk Drivers
         top_drivers = sorted(risk_factors, key=lambda x: x["weighted_contribution"], reverse=True)[:3]
@@ -244,6 +294,7 @@ class RiskEngine:
                 "weather_is_live": weather_data.get("is_live", False)
             },
             "missing_data_warnings": missing_warnings,
+            "farmer_ground_truth": farmer_ground_truth,
             "evaluated_at": datetime.now(timezone.utc).isoformat()
         }
 
@@ -256,7 +307,7 @@ class RiskEngine:
         cloud_fraction: float,
         obs_age_days: float,
         fires_count_48h: int
-    ) -> (float, float, List[str]):
+    ) -> Tuple[float, float, List[str]]:
         """
         Step 1: Estimate recently harvested, potentially unburned agricultural land proxy.
         """
@@ -291,6 +342,44 @@ class RiskEngine:
 
         return residue_opp, estimated_hectares, flags
 
+    def _calculate_calendar_urgency(self, target_date: Optional[str] = None) -> float:
+        """
+        Calculates temporal urgency (0.0 to 1.0) based on Punjab Kharif-to-Rabi transition calendar.
+        Peak burning pressure occurs between Oct 20 (harvest peak) and Nov 15 (wheat sowing deadline).
+        """
+        if target_date:
+            try:
+                dt = datetime.fromisoformat(target_date.replace("Z", "+00:00"))
+            except Exception:
+                try:
+                    dt = datetime.strptime(target_date[:10], "%Y-%m-%d")
+                except Exception:
+                    dt = datetime.now(timezone.utc)
+        else:
+            dt = datetime.now(timezone.utc)
+
+        month = dt.month
+        day = dt.day
+
+        # Punjab Kharif autumn harvest to Rabi wheat transition
+        if month == 10:
+            if day < 15:
+                return round(0.65 + (day / 15.0) * 0.15, 2)
+            else:
+                return round(0.80 + ((day - 15) / 16.0) * 0.15, 2)
+        elif month == 11:
+            if day <= 15:
+                # Urgent pre-sowing window
+                return round(0.95 - ((day - 1) / 15.0) * 0.10, 2)
+            elif day <= 25:
+                return round(0.85 - ((day - 15) / 10.0) * 0.35, 2)
+            else:
+                return 0.35
+        elif month == 9 and day >= 25:
+            return round(0.50 + ((day - 25) / 5.0) * 0.15, 2)
+        else:
+            return 0.40
+
     def _calculate_fire_risk(
         self,
         district: str,
@@ -300,21 +389,18 @@ class RiskEngine:
         days_since_harvest: Optional[float],
         current_ndti: float,
         fire_weather_index: float,
-        state: AgriculturalState
-    ) -> (float, List[Dict[str, Any]]):
+        state: AgriculturalState,
+        target_date: Optional[str] = None
+    ) -> Tuple[float, List[Dict[str, Any]]]:
         """
         Step 2: Explainable weighted fire risk score.
         """
         factors = []
 
-        # 1. Historical District Fire Density Baseline
-        # Sangrur is the historic highest-density burning district in Punjab
-        district_baseline = {
-            "Sangrur": 0.88,
-            "Bathinda": 0.75,
-            "Tarn Taran": 0.72,
-            "Ludhiana": 0.65
-        }.get(district, 0.60)
+        # 1. Historical District Fire Density Baseline from config
+        district_baseline = settings.DISTRICT_FIRE_DENSITY_BASELINES.get(
+            district, settings.DEFAULT_FIRE_DENSITY_BASELINE
+        )
         hist_score = district_baseline
         factors.append({
             "factor_name": "Historical Seasonal Fire Density",
@@ -334,19 +420,18 @@ class RiskEngine:
             "description": f"{fires_48h} thermal detection(s) in sector over past 48h ({fires_7d} over 7 days)."
         })
 
-        # 3. Estimated Harvest Recency / Drying Curve
-        # Straw dries out and fire risk peaks 3-7 days post-harvest
+        # 3. Estimated Harvest Recency / Drying Curve from config
         if days_since_harvest is not None:
             if 3.0 <= days_since_harvest <= 7.0:
-                recency_score = 0.90  # Critical drying window
+                recency_score = settings.RECENCY_SCORE_CRITICAL_DRYING
             elif 1.0 <= days_since_harvest < 3.0:
-                recency_score = 0.60  # Straw still slightly moist
+                recency_score = settings.RECENCY_SCORE_EARLY_MOIST
             elif 7.0 < days_since_harvest <= 11.0:
-                recency_score = 0.75  # Urgent pre-sowing window
+                recency_score = settings.RECENCY_SCORE_URGENT_PRE_SOW
             else:
-                recency_score = 0.30
+                recency_score = settings.RECENCY_SCORE_EXPIRED
         else:
-            recency_score = 0.45 if state == AgriculturalState.RECENTLY_HARVESTED else 0.20
+            recency_score = settings.RECENCY_SCORE_DEFAULT if state == AgriculturalState.RECENTLY_HARVESTED else 0.20
 
         factors.append({
             "factor_name": "Crop Residue Desiccation Timing",
@@ -375,9 +460,8 @@ class RiskEngine:
             "description": f"Forecast dryness, wind, and thermal conditions (FWI: {fire_weather_index:.2f})."
         })
 
-        # 6. Crop Calendar Urgency
-        # Peak Punjab burning happens late October to mid-November before wheat sowing
-        calendar_urgency = 0.85
+        # 6. Crop Calendar Urgency (Dynamically calculated based on calendar)
+        calendar_urgency = self._calculate_calendar_urgency(target_date)
         factors.append({
             "factor_name": "Wheat Sowing Crop Calendar Pressure",
             "raw_value": round(calendar_urgency, 2),
@@ -401,7 +485,7 @@ class RiskEngine:
         fires_48h: int,
         cloud_fraction: float,
         obs_age_days: float
-    ) -> (float, str, str):
+    ) -> Tuple[float, str, str]:
         """
         Step 3: Estimate preventability window.
         Distinguishes actionable pre-fire windows from lost opportunities or already burned fields.
@@ -415,7 +499,7 @@ class RiskEngine:
         if state == AgriculturalState.POSSIBLY_BURNED:
             return 0.15, "ALREADY_BURNED_OR_TILLED", "Spectral signature indicates fields already burned or tilled; low remaining prevention opportunity."
 
-        if cloud_fraction > 0.50 or obs_age_days > 10:
+        if cloud_fraction > settings.UNCERTAINTY_CLOUD_FRACTION_THRESHOLD or obs_age_days > 10:
             return 0.40, "UNCERTAIN_WINDOW", "Observation quality insufficient to establish exact post-harvest window without field scouting."
 
         # Recently harvested state: Evaluate days post-harvest
@@ -448,7 +532,7 @@ class RiskEngine:
         cloud_fraction: float,
         obs_age_days: float,
         is_weather_live: bool
-    ) -> (float, List[str]):
+    ) -> Tuple[float, List[str]]:
         warnings = []
         quality = 1.0
 

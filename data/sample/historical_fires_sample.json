@@ -1,0 +1,11 @@
+[
+  {"lat": 30.125, "lon": 75.810, "frp": 18.4, "hours_ago": 4.5, "conf": "high", "cluster": 2, "loc": "Sunam South"},
+  {"lat": 29.930, "lon": 75.820, "frp": 24.1, "hours_ago": 12.0, "conf": "high", "cluster": 3, "loc": "Lehragaga Outskirts"},
+  {"lat": 30.265, "lon": 76.035, "frp": 12.2, "hours_ago": 26.0, "conf": "nominal", "cluster": 1, "loc": "Bhawanigarh East"},
+  {"lat": 29.815, "lon": 75.895, "frp": 15.6, "hours_ago": 36.0, "conf": "nominal", "cluster": 1, "loc": "Moonak Border"},
+  {"lat": 30.780, "lon": 75.470, "frp": 14.8, "hours_ago": 8.0, "conf": "high", "cluster": 2, "loc": "Jagraon West"},
+  {"lat": 30.700, "lon": 76.220, "frp": 9.5, "hours_ago": 42.0, "conf": "nominal", "cluster": 1, "loc": "Khanna Fields"},
+  {"lat": 29.975, "lon": 75.085, "frp": 28.5, "hours_ago": 14.0, "conf": "high", "cluster": 3, "loc": "Talwandi Sabo"},
+  {"lat": 30.075, "lon": 75.235, "frp": 11.0, "hours_ago": 40.0, "conf": "nominal", "cluster": 1, "loc": "Maur"},
+  {"lat": 31.275, "lon": 74.855, "frp": 21.3, "hours_ago": 6.0, "conf": "high", "cluster": 2, "loc": "Patti Farmlands"}
+]

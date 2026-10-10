@@ -11,6 +11,7 @@ Computes state probabilities, transition evidence, and uncertainty flags.
 from enum import Enum
 from typing import Dict, Any, List, Optional
 import math
+from config.settings import settings
 
 
 class AgriculturalState(str, Enum):
@@ -69,9 +70,9 @@ class TransitionModel:
         if (cloud_fraction > 0.40) and sar_data and sar_data.get("cloud_penetrated"):
             sar_obs = sar_data.get("sar_observation", {})
             sar_state_str = sar_data.get("effective_agricultural_state", "RECENTLY_HARVESTED")
-            sar_conf = sar_data.get("confidence_score", 88.0) / 100.0
-            vh_db = sar_obs.get("backscatter_coefficients_db", {}).get("sigma0_vh_db", -22.0)
-            cr_db = sar_obs.get("backscatter_coefficients_db", {}).get("cross_ratio_db", -12.5)
+            sar_conf = sar_data.get("confidence_score", settings.SAR_CLOUD_PIERCING_CONFIDENCE_MIN * 100.0) / 100.0
+            vh_db = sar_obs.get("backscatter_coefficients_db", {}).get("sigma0_vh_db", settings.SAR_VH_HARVESTED_THRESHOLD_DB)
+            cr_db = sar_obs.get("backscatter_coefficients_db", {}).get("cross_ratio_db", settings.SAR_CROSS_RATIO_THRESHOLD_DB)
 
             resolved_state = AgriculturalState(sar_state_str) if sar_state_str in AgriculturalState.__members__ else AgriculturalState.RECENTLY_HARVESTED
             return {

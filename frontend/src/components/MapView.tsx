@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import maplibregl, { Map as MapLibreMap } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { MapboxOverlay } from '@deck.gl/mapbox';
-import { PolygonLayer } from '@deck.gl/layers';
+import { PolygonLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers';
 import { TripsLayer } from '@deck.gl/geo-layers';
-import { Satellite, Moon } from 'lucide-react';
+import { Satellite, Moon, Wind, ShieldAlert } from 'lucide-react';
 import { useStore, GridCell } from '../store/useStore';
+import { translations } from '../data/translations';
 
 const INITIAL_VIEW = {
   longitude: 75.5,
@@ -15,11 +16,17 @@ const INITIAL_VIEW = {
   bearing: -8,
 };
 
-const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY || 'q897syVGplVTWzmOxx1Y';
+// Safe API key retrieval without hardcoding in source (H30)
+const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY || '';
 
+// High performance fallback styles (CARTO Dark Matter is free & requires no key)
 const MAP_STYLES = {
-  hybrid: `https://api.maptiler.com/maps/hybrid-v4/style.json?key=${MAPTILER_KEY}`,
-  dark: `https://api.maptiler.com/maps/dataviz-dark/style.json?key=${MAPTILER_KEY}`,
+  hybrid: MAPTILER_KEY
+    ? `https://api.maptiler.com/maps/hybrid-v4/style.json?key=${MAPTILER_KEY}`
+    : 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+  dark: MAPTILER_KEY
+    ? `https://api.maptiler.com/maps/dataviz-dark/style.json?key=${MAPTILER_KEY}`
+    : 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
 };
 
 function getRiskColor(score: number, status: string): [number, number, number, number] {
@@ -48,8 +55,9 @@ export default function MapView() {
   const mapRef = useRef<MapLibreMap | null>(null);
   const overlayRef = useRef<MapboxOverlay | null>(null);
   const animFrameRef = useRef<number>(0);
-  const [mapStyleMode, setMapStyleMode] = useState<'hybrid' | 'dark'>('hybrid');
+  const animTimeRef = useRef<number>(0);
 
+  const [mapStyleMode, setMapStyleMode] = useState<'hybrid' | 'dark'>('hybrid');
   const [hoverInfo, setHoverInfo] = useState<{
     x: number;
     y: number;
@@ -58,23 +66,17 @@ export default function MapView() {
 
   const grids = useStore((s) => s.grids);
   const windDrifts = useStore((s) => s.windDrifts);
+  const cpcbStations = useStore((s) => s.cpcbStations);
+  const showWindParticles = useStore((s) => s.showWindParticles);
+  const showCpcbLayer = useStore((s) => s.showCpcbLayer);
+  const toggleWindParticles = useStore((s) => s.toggleWindParticles);
+  const toggleCpcbLayer = useStore((s) => s.toggleCpcbLayer);
   const setSelectedGrid = useStore((s) => s.setSelectedGrid);
   const setHoveredGrid = useStore((s) => s.setHoveredGrid);
-  const [animTime, setAnimTime] = useState(0);
+  const lang = useStore((s) => s.lang);
+  const t = translations[lang];
 
-  // TripsLayer continuous animation loop
-  useEffect(() => {
-    let start: number | null = null;
-    const loop = (timestamp: number) => {
-      if (!start) start = timestamp;
-      const elapsed = timestamp - start;
-      setAnimTime(elapsed % 3000);
-      animFrameRef.current = requestAnimationFrame(loop);
-    };
-    animFrameRef.current = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(animFrameRef.current);
-  }, []);
-
+  // Memoize trips data structure (O11)
   const tripsData = useMemo(() => {
     return windDrifts.map((drift) => ({
       path: drift.waypoints.map((wp) => wp.coordinates),
@@ -83,10 +85,15 @@ export default function MapView() {
     }));
   }, [windDrifts]);
 
-  // Construct deck.gl layers
-  const layers = useMemo(() => {
-    return [
-      // 1. Glowing Fire Risk (deck.gl PolygonLayer) with Additive Blending
+  // Memoize update triggers once per grids array change, NOT on every frame (O11)
+  const gridUpdateTrigger = useMemo(() => {
+    return grids.map((g) => `${g.id}:${g.risk_score}:${g.intervention_status}`).join('|');
+  }, [grids]);
+
+  // Static layers memoized independently of animation frames (Optimization B6)
+  const staticLayers = useMemo(() => {
+    const list: any[] = [
+      // 1. Glowing Fire Risk Polygon Layer
       new PolygonLayer<GridCell>({
         id: 'risk-polygons-glow',
         data: grids,
@@ -122,9 +129,9 @@ export default function MapView() {
           }
         },
         updateTriggers: {
-          getFillColor: [grids.map((g) => `${g.id}-${g.risk_score}-${g.intervention_status}`).join(',')],
-          getElevation: [grids.map((g) => `${g.id}-${g.risk_score}-${g.intervention_status}`).join(',')],
-          getLineColor: [grids.map((g) => `${g.id}-${g.risk_score}-${g.intervention_status}`).join(',')],
+          getFillColor: [gridUpdateTrigger],
+          getElevation: [gridUpdateTrigger],
+          getLineColor: [gridUpdateTrigger],
         },
         transitions: {
           getFillColor: 600,
@@ -141,8 +148,8 @@ export default function MapView() {
           const cy = d.centroid[1];
           const r = 0.065;
           const pts: number[][] = [];
-          for (let i = 0; i < 32; i++) {
-            const a = (i / 32) * Math.PI * 2;
+          for (let i = 0; i < 24; i++) {
+            const a = (i / 24) * Math.PI * 2;
             pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
           }
           pts.push(pts[0]);
@@ -162,19 +169,58 @@ export default function MapView() {
           depthCompare: 'always',
         },
       }),
+    ];
 
-      // 3. Cinematic Downwind Drift (deck.gl TripsLayer)
-      new TripsLayer({
+    // Live CPCB Station Layer
+    if (showCpcbLayer && cpcbStations.length > 0) {
+      list.push(
+        new ScatterplotLayer({
+          id: 'cpcb-stations-dot',
+          data: cpcbStations,
+          getPosition: (d: any) => d.coordinates,
+          getRadius: 3800,
+          radiusMinPixels: 6,
+          radiusMaxPixels: 18,
+          getFillColor: (d: any) => (d.aqi > 250 ? [239, 68, 68, 220] : [245, 158, 11, 200]),
+          getLineColor: [255, 255, 255, 200],
+          lineWidthMinPixels: 1.5,
+          stroked: true,
+          pickable: true,
+        }),
+        new TextLayer({
+          id: 'cpcb-stations-label',
+          data: cpcbStations,
+          getPosition: (d: any) => d.coordinates,
+          getText: (d: any) => `AQI ${d.aqi}`,
+          getSize: 10,
+          getColor: [255, 255, 255, 255],
+          getTextAnchor: 'start',
+          getAlignmentBaseline: 'center',
+          pixelOffset: [12, -2],
+        })
+      );
+    }
+
+    return list;
+  }, [grids, gridUpdateTrigger, showCpcbLayer, cpcbStations, setSelectedGrid, setHoveredGrid]);
+
+  const staticLayersRef = useRef<any[]>(staticLayers);
+  staticLayersRef.current = staticLayers;
+
+  const buildAnimatedTripsLayer = useCallback(
+    (currentTime: number) => {
+      if (!showWindParticles) return null;
+      return new TripsLayer({
         id: 'wind-drift-trips',
         data: tripsData,
         getPath: (d: any) => d.path,
         getTimestamps: (d: any) => d.timestamps,
-        getColor: [255, 120, 40, 230],
+        getColor: [255, 130, 45, 230],
         getWidth: 4,
         widthMinPixels: 3,
         widthMaxPixels: 9,
         trailLength: 600,
-        currentTime: animTime,
+        currentTime,
         shadowEnabled: false,
         parameters: {
           blend: true,
@@ -183,9 +229,10 @@ export default function MapView() {
           blendColorDstFactor: 'one',
           depthCompare: 'always',
         },
-      }),
-    ];
-  }, [grids, tripsData, animTime, setSelectedGrid, setHoveredGrid]);
+      });
+    },
+    [showWindParticles, tripsData]
+  );
 
   // Initialize MapLibre & Deck.gl MapboxOverlay
   useEffect(() => {
@@ -193,7 +240,7 @@ export default function MapView() {
 
     const map = new MapLibreMap({
       container: mapContainer.current,
-      style: MAP_STYLES.hybrid,
+      style: MAP_STYLES[mapStyleMode],
       center: [INITIAL_VIEW.longitude, INITIAL_VIEW.latitude],
       zoom: INITIAL_VIEW.zoom,
       pitch: INITIAL_VIEW.pitch,
@@ -201,9 +248,10 @@ export default function MapView() {
       interactive: true,
     });
 
+    const initialTrips = buildAnimatedTripsLayer(0);
     const overlay = new MapboxOverlay({
       interleaved: false,
-      layers: [],
+      layers: initialTrips ? [...staticLayersRef.current, initialTrips] : staticLayersRef.current,
     });
 
     map.addControl(overlay as unknown as maplibregl.IControl);
@@ -211,22 +259,46 @@ export default function MapView() {
     mapRef.current = map;
     overlayRef.current = overlay;
 
+    // Decoupled Animation Loop: Updates ONLY the dynamic TripsLayer without re-creating static layers! (Optimization B6)
+    let start: number | null = null;
+    const loop = (timestamp: number) => {
+      if (!start) start = timestamp;
+      const elapsed = timestamp - start;
+      const curTime = elapsed % 3000;
+      animTimeRef.current = curTime;
+
+      if (overlayRef.current) {
+        const trips = buildAnimatedTripsLayer(curTime);
+        overlayRef.current.setProps({
+          layers: trips ? [...staticLayersRef.current, trips] : staticLayersRef.current,
+        });
+      }
+
+      animFrameRef.current = requestAnimationFrame(loop);
+    };
+
+    animFrameRef.current = requestAnimationFrame(loop);
+
     return () => {
+      cancelAnimationFrame(animFrameRef.current);
       overlay.finalize();
       map.remove();
       mapRef.current = null;
       overlayRef.current = null;
     };
-  }, []);
+  }, [buildAnimatedTripsLayer, mapStyleMode]);
 
-  // Synchronize layers with Deck.gl overlay
+  // Update overlay immediately when static layers or active selection changes
   useEffect(() => {
     if (overlayRef.current) {
-      overlayRef.current.setProps({ layers });
+      const trips = buildAnimatedTripsLayer(animTimeRef.current);
+      overlayRef.current.setProps({
+        layers: trips ? [...staticLayers, trips] : staticLayers,
+      });
     }
-  }, [layers]);
+  }, [staticLayers, buildAnimatedTripsLayer]);
 
-  // Switch basemap style between Hybrid Satellite and Dark
+  // Switch basemap style
   const toggleMapStyle = (mode: 'hybrid' | 'dark') => {
     setMapStyleMode(mode);
     if (mapRef.current) {
@@ -236,11 +308,12 @@ export default function MapView() {
 
   return (
     <>
-      {/* MapLibre Container (absolute full-screen) */}
+      {/* MapLibre Container */}
       <div ref={mapContainer} className="absolute inset-0 w-screen h-screen z-0" />
 
-      {/* Floating Basemap Style Switcher (Top Right) */}
-      <div className="fixed top-4 right-[360px] z-30 pointer-events-auto">
+      {/* Floating Basemap & Layer Controls (Top Right) */}
+      <div className="fixed top-4 right-[360px] z-30 pointer-events-auto flex items-center gap-2">
+        {/* Basemap Switcher */}
         <div className="bg-black/75 backdrop-blur-xl border border-white/10 rounded-full p-1 flex items-center gap-1 shadow-2xl">
           <button
             onClick={() => toggleMapStyle('hybrid')}
@@ -251,7 +324,7 @@ export default function MapView() {
             }`}
           >
             <Satellite className="w-3.5 h-3.5" />
-            <span>Satellite Hybrid</span>
+            <span>Satellite</span>
           </button>
           <button
             onClick={() => toggleMapStyle('dark')}
@@ -262,7 +335,31 @@ export default function MapView() {
             }`}
           >
             <Moon className="w-3.5 h-3.5" />
-            <span>Dark Vector</span>
+            <span>Dark</span>
+          </button>
+        </div>
+
+        {/* Feature Overlays Toggle */}
+        <div className="bg-black/75 backdrop-blur-xl border border-white/10 rounded-full p-1 flex items-center gap-1 shadow-2xl">
+          <button
+            onClick={toggleWindParticles}
+            title="Toggle Wind Particle Drift"
+            className={`px-2.5 py-1 rounded-full text-[11px] font-medium flex items-center gap-1 transition-all ${
+              showWindParticles ? 'bg-orange-500/20 text-orange-400' : 'text-white/40 hover:text-white'
+            }`}
+          >
+            <Wind className="w-3.5 h-3.5" />
+            <span>Wind</span>
+          </button>
+          <button
+            onClick={toggleCpcbLayer}
+            title="Toggle CPCB Air Quality Stations"
+            className={`px-2.5 py-1 rounded-full text-[11px] font-medium flex items-center gap-1 transition-all ${
+              showCpcbLayer ? 'bg-red-500/20 text-red-400' : 'text-white/40 hover:text-white'
+            }`}
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            <span>CPCB</span>
           </button>
         </div>
       </div>
@@ -321,7 +418,7 @@ export default function MapView() {
             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px] text-white/70">
               <span>📍 <span className="font-mono">{hoverInfo.grid.centroid[1].toFixed(3)}°N, {hoverInfo.grid.centroid[0].toFixed(3)}°E</span></span>
               <span>🔥 Risk: <span className="text-white font-mono font-bold">{(hoverInfo.grid.risk_score * 100).toFixed(0)}%</span></span>
-              <span className="col-span-2">🕐 Burn Window: <span className="text-amber-400 font-mono font-medium">{hoverInfo.grid.burn_window}</span></span>
+              <span className="col-span-2">🚜 Action: <span className="text-amber-400 font-mono font-medium">{hoverInfo.grid.recommended_action || 'CRM Dispatch'}</span></span>
               <span>💨 Wind: <span className="text-white font-mono">{hoverInfo.grid.wind_speed_kmh} km/h</span></span>
               <span>🌡️ Temp: <span className="text-white font-mono">{hoverInfo.grid.temperature_c}°C</span></span>
               <span>🫁 AQI Now: <span className="text-white font-mono">{hoverInfo.grid.aqi_current}</span></span>

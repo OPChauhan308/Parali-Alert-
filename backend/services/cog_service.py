@@ -11,6 +11,8 @@ Instead of downloading 500MB full Sentinel-2 .SAFE / .zip tiles, this service:
 """
 
 import math
+import logging
+from datetime import datetime, timezone, timedelta
 import numpy as np
 import rasterio
 from rasterio.windows import Window, from_bounds
@@ -26,6 +28,8 @@ from backend.services.spectral import (
     calculate_sti,
     create_cloud_mask_from_scl
 )
+
+logger = logging.getLogger("cog_service")
 
 
 class CogRangeService:
@@ -45,6 +49,7 @@ class CogRangeService:
     ) -> Optional[Dict[str, str]]:
         """
         Discovers Sentinel-2 COG asset URLs for a given coordinate via AWS Open Data STAC.
+        Uses dynamically calculated recent observation window.
         """
         min_lon = lon - self.buffer_deg
         max_lon = lon + self.buffer_deg
@@ -54,15 +59,16 @@ class CogRangeService:
         if target_date:
             date_filter = f"{target_date}T00:00:00Z/{target_date}T23:59:59Z"
         else:
-            # Query recent 14 days
-            date_filter = "2024-10-15T00:00:00Z/2024-11-15T23:59:59Z"
+            now = datetime.now(timezone.utc)
+            start_window = now - timedelta(days=14)
+            date_filter = f"{start_window.strftime('%Y-%m-%d')}T00:00:00Z/{now.strftime('%Y-%m-%d')}T23:59:59Z"
 
         payload = {
             "collections": ["sentinel-2-l2a"],
             "bbox": [min_lon, min_lat, max_lon, max_lat],
             "datetime": date_filter,
             "query": {
-                "eo:cloud_cover": {"lt": 50.0}
+                "eo:cloud_cover": {"lt": settings.SENTINEL_MAX_CLOUD_COVER}
             },
             "limit": 1
         }
@@ -85,8 +91,10 @@ class CogRangeService:
                             "tile_id": features[0].get("id", "S2_AWS_COG"),
                             "datetime": features[0].get("properties", {}).get("datetime", "")
                         }
-        except Exception:
-            pass
+                else:
+                    logger.warning(f"COG STAC search returned HTTP {resp.status_code}")
+        except Exception as e:
+            logger.warning(f"COG STAC asset query error: {e}")
         return None
 
     def read_window_sync(
@@ -158,8 +166,8 @@ class CogRangeService:
         if not assets:
             return None
 
-        # Fetch bands concurrently in thread pool
-        loop = asyncio.get_event_loop()
+        # Fetch bands concurrently in thread pool using running loop
+        loop = asyncio.get_running_loop()
         futures = {
             "red": loop.run_in_executor(self.executor, self.read_window_sync, assets["red"], bbox),
             "nir": loop.run_in_executor(self.executor, self.read_window_sync, assets["nir"], bbox),
@@ -230,6 +238,9 @@ class CogRangeService:
             mean_sti = 1.10
 
         bytes_streamed = int(sum(b.nbytes for b in bands.values()))
+        full_tile_bytes = 500 * 1024 * 1024
+        savings_pct = round((1.0 - (bytes_streamed / full_tile_bytes)) * 100.0, 2)
+        streamed_kb = round(bytes_streamed / 1024.0, 1)
 
         result = {
             "source": "AWS Open Data STAC COG Range Request",
@@ -238,8 +249,8 @@ class CogRangeService:
             "pixels_extracted": total_pixels,
             "valid_pixels": valid_count,
             "cloud_cover_pct": cloud_pct,
-            "bytes_transferred_kb": round(bytes_streamed / 1024.0, 1),
-            "efficiency_ratio": "45KB streamed vs 500MB full tile (99.99% data transfer reduction)",
+            "bytes_transferred_kb": streamed_kb,
+            "efficiency_ratio": f"{streamed_kb}KB streamed vs 500MB full tile ({savings_pct}% data transfer reduction)",
             "mean_ndvi": mean_ndvi,
             "mean_ndti": mean_ndti,
             "mean_sti": mean_sti,
