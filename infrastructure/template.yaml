@@ -40,6 +40,26 @@ Resources:
             Transitions:
               - TransitionInDays: 60
                 StorageClass: GLACIER
+  # SNS Topic for Dispatch Alerts
+  DispatchAlertSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: ParaliDispatchAlerts
+      DisplayName: "ParaliAlert"
+
+  # Modify your existing Backend Lambda Function (Example Name)
+  ParaliBackendFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: lambda_handler.handler
+      Runtime: python3.11
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt DispatchAlertSNSTopic.TopicName
+      Environment:
+        Variables:
+          # Pass the dynamic Topic ARN to the Python backend
+          SNS_DISPATCH_TOPIC_ARN: !Ref DispatchAlertSNSTopic
 
   # Scheduled Pre-Fire Assessment Lambda Function
   DailyAssessmentFunction:
