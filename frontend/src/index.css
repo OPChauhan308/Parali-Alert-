@@ -1,92 +1,72 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg-paper: #F6F5F0;
-  --bg-pure: #FFFFFF;
-  --bg-warm: #EFECE4;
-  --bg-linen: #E7E3D8;
-  
-  --border-hairline: #DCD7CC;
-  --border-strong: #181816;
-  --border-subtle: #EAE6DC;
-  
-  --ink-primary: #181816;
-  --ink-secondary: #4A473F;
-  --ink-muted: #767267;
-  --ink-faint: #A49F93;
-  
-  --c-terracotta: #991B1B;
-  --c-ochre: #B45309;
-  --c-sage: #166534;
+  --color-bg: #000000;
+  --color-panel: rgba(0, 0, 0, 0.7);
 }
 
-body {
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: var(--bg-paper);
-  color: var(--ink-primary);
-  min-height: 100vh;
+* {
   margin: 0;
   padding: 0;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
+  box-sizing: border-box;
 }
 
-/* Typography Classes */
-.font-editorial {
-  font-family: 'Newsreader', Georgia, serif;
-  letter-spacing: -0.015em;
-}
-
-.font-mono-tabular {
-  font-family: 'JetBrains Mono', monospace;
-  font-feature-settings: 'tnum' 1, 'zero' 1;
-  letter-spacing: -0.02em;
-}
-
-/* Leaflet Cartographic Overrides - Light Institutional Style */
-.leaflet-container {
+html, body, #root {
   width: 100%;
   height: 100%;
-  background: #EAE6DC !important;
-  font-family: 'JetBrains Mono', monospace !important;
+  overflow: hidden;
+  background: #000;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.leaflet-popup-content-wrapper {
-  background: #FFFFFF !important;
-  color: #181816 !important;
-  border: 1px solid #181816 !important;
-  border-radius: 0px !important;
-  box-shadow: 0 4px 16px rgba(24, 24, 22, 0.12) !important;
-  padding: 0 !important;
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
-.leaflet-popup-content {
-  margin: 10px 14px !important;
-  line-height: 1.4 !important;
+/* MapLibre overrides */
+.maplibregl-ctrl-bottom-left,
+.maplibregl-ctrl-bottom-right {
+  display: none !important;
 }
 
-.leaflet-popup-tip {
-  background: #FFFFFF !important;
+.maplibregl-canvas {
+  outline: none;
 }
 
-/* Crisp Active Thermal Target Animation */
-@keyframes thermal-ping {
-  0% {
-    transform: scale(0.9);
-    opacity: 0.95;
-  }
-  50% {
-    transform: scale(1.25);
-    opacity: 0.45;
-  }
-  100% {
-    transform: scale(0.9);
-    opacity: 0.95;
-  }
+/* Monospace font for data */
+.font-mono {
+  font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
 }
 
-.thermal-anomaly-marker {
-  animation: thermal-ping 1.8s infinite ease-in-out;
+/* Subtle scan line effect */
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+/* Glow animation for critical items */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 50, 30, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(255, 50, 30, 0.6); }
+}
+
+.glow-critical {
+  animation: glow-pulse 2s ease-in-out infinite;
 }
