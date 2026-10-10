@@ -1,0 +1,335 @@
+import { useEffect, useRef, useState, useMemo } from 'react';
+import maplibregl, { Map as MapLibreMap } from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { MapboxOverlay } from '@deck.gl/mapbox';
+import { PolygonLayer } from '@deck.gl/layers';
+import { TripsLayer } from '@deck.gl/geo-layers';
+import { Satellite, Moon } from 'lucide-react';
+import { useStore, GridCell } from '../store/useStore';
+
+const INITIAL_VIEW = {
+  longitude: 75.5,
+  latitude: 30.7,
+  zoom: 7.5,
+  pitch: 35,
+  bearing: -8,
+};
+
+const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY || 'q897syVGplVTWzmOxx1Y';
+
+const MAP_STYLES = {
+  hybrid: `https://api.maptiler.com/maps/hybrid-v4/style.json?key=${MAPTILER_KEY}`,
+  dark: `https://api.maptiler.com/maps/dataviz-dark/style.json?key=${MAPTILER_KEY}`,
+};
+
+function getRiskColor(score: number, status: string): [number, number, number, number] {
+  if (status === 'dispatched') return [0, 220, 80, 160];
+  if (score >= 0.8) return [255, 50, 20, 210];
+  if (score >= 0.6) return [255, 140, 0, 180];
+  if (score >= 0.4) return [255, 200, 40, 150];
+  return [60, 180, 90, 120];
+}
+
+function getLineColor(score: number, status: string): [number, number, number, number] {
+  if (status === 'dispatched') return [0, 255, 120, 240];
+  if (score >= 0.8) return [255, 80, 40, 255];
+  if (score >= 0.6) return [255, 160, 30, 240];
+  if (score >= 0.4) return [255, 210, 60, 220];
+  return [80, 200, 110, 200];
+}
+
+function getElevation(score: number, status: string): number {
+  if (status === 'dispatched') return 200;
+  return score * 8000;
+}
+
+export default function MapView() {
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
+  const overlayRef = useRef<MapboxOverlay | null>(null);
+  const animFrameRef = useRef<number>(0);
+  const [mapStyleMode, setMapStyleMode] = useState<'hybrid' | 'dark'>('hybrid');
+
+  const [hoverInfo, setHoverInfo] = useState<{
+    x: number;
+    y: number;
+    grid: GridCell;
+  } | null>(null);
+
+  const grids = useStore((s) => s.grids);
+  const windDrifts = useStore((s) => s.windDrifts);
+  const setSelectedGrid = useStore((s) => s.setSelectedGrid);
+  const setHoveredGrid = useStore((s) => s.setHoveredGrid);
+  const [animTime, setAnimTime] = useState(0);
+
+  // TripsLayer continuous animation loop
+  useEffect(() => {
+    let start: number | null = null;
+    const loop = (timestamp: number) => {
+      if (!start) start = timestamp;
+      const elapsed = timestamp - start;
+      setAnimTime(elapsed % 3000);
+      animFrameRef.current = requestAnimationFrame(loop);
+    };
+    animFrameRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animFrameRef.current);
+  }, []);
+
+  const tripsData = useMemo(() => {
+    return windDrifts.map((drift) => ({
+      path: drift.waypoints.map((wp) => wp.coordinates),
+      timestamps: drift.waypoints.map((wp) => wp.timestamp),
+      sourceGrid: drift.source_grid,
+    }));
+  }, [windDrifts]);
+
+  // Construct deck.gl layers
+  const layers = useMemo(() => {
+    return [
+      // 1. Glowing Fire Risk (deck.gl PolygonLayer) with Additive Blending
+      new PolygonLayer<GridCell>({
+        id: 'risk-polygons-glow',
+        data: grids,
+        getPolygon: (d) => d.polygon,
+        getFillColor: (d) => getRiskColor(d.risk_score, d.intervention_status),
+        getLineColor: (d) => getLineColor(d.risk_score, d.intervention_status),
+        getLineWidth: 2,
+        lineWidthMinPixels: 1,
+        getElevation: (d) => getElevation(d.risk_score, d.intervention_status),
+        extruded: true,
+        pickable: true,
+        stroked: true,
+        filled: true,
+        wireframe: true,
+        elevationScale: 1,
+        parameters: {
+          blend: true,
+          blendColorOperation: 'add',
+          blendColorSrcFactor: 'src-alpha',
+          blendColorDstFactor: 'one',
+          depthCompare: 'always',
+        },
+        onClick: ({ object }: { object?: GridCell }) => {
+          if (object) setSelectedGrid(object.id);
+        },
+        onHover: ({ object, x, y }: { object?: GridCell; x: number; y: number }) => {
+          if (object) {
+            setHoverInfo({ x, y, grid: object });
+            setHoveredGrid(object.id);
+          } else {
+            setHoverInfo(null);
+            setHoveredGrid(null);
+          }
+        },
+        updateTriggers: {
+          getFillColor: [grids.map((g) => `${g.id}-${g.risk_score}-${g.intervention_status}`).join(',')],
+          getElevation: [grids.map((g) => `${g.id}-${g.risk_score}-${g.intervention_status}`).join(',')],
+          getLineColor: [grids.map((g) => `${g.id}-${g.risk_score}-${g.intervention_status}`).join(',')],
+        },
+        transitions: {
+          getFillColor: 600,
+          getElevation: 600,
+        },
+      }),
+
+      // 2. Secondary heat halo polygon for extreme hotspots
+      new PolygonLayer<GridCell>({
+        id: 'risk-polygons-halo',
+        data: grids.filter((g) => g.risk_score >= 0.7 && g.intervention_status !== 'dispatched'),
+        getPolygon: (d) => {
+          const cx = d.centroid[0];
+          const cy = d.centroid[1];
+          const r = 0.065;
+          const pts: number[][] = [];
+          for (let i = 0; i < 32; i++) {
+            const a = (i / 32) * Math.PI * 2;
+            pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
+          }
+          pts.push(pts[0]);
+          return pts;
+        },
+        getFillColor: (d) => {
+          const intensity = Math.floor(d.risk_score * 120);
+          return [255, 40 + intensity, 0, Math.floor(d.risk_score * 65)];
+        },
+        stroked: false,
+        filled: true,
+        parameters: {
+          blend: true,
+          blendColorOperation: 'add',
+          blendColorSrcFactor: 'src-alpha',
+          blendColorDstFactor: 'one',
+          depthCompare: 'always',
+        },
+      }),
+
+      // 3. Cinematic Downwind Drift (deck.gl TripsLayer)
+      new TripsLayer({
+        id: 'wind-drift-trips',
+        data: tripsData,
+        getPath: (d: any) => d.path,
+        getTimestamps: (d: any) => d.timestamps,
+        getColor: [255, 120, 40, 230],
+        getWidth: 4,
+        widthMinPixels: 3,
+        widthMaxPixels: 9,
+        trailLength: 600,
+        currentTime: animTime,
+        shadowEnabled: false,
+        parameters: {
+          blend: true,
+          blendColorOperation: 'add',
+          blendColorSrcFactor: 'src-alpha',
+          blendColorDstFactor: 'one',
+          depthCompare: 'always',
+        },
+      }),
+    ];
+  }, [grids, tripsData, animTime, setSelectedGrid, setHoveredGrid]);
+
+  // Initialize MapLibre & Deck.gl MapboxOverlay
+  useEffect(() => {
+    if (!mapContainer.current || mapRef.current) return;
+
+    const map = new MapLibreMap({
+      container: mapContainer.current,
+      style: MAP_STYLES.hybrid,
+      center: [INITIAL_VIEW.longitude, INITIAL_VIEW.latitude],
+      zoom: INITIAL_VIEW.zoom,
+      pitch: INITIAL_VIEW.pitch,
+      bearing: INITIAL_VIEW.bearing,
+      interactive: true,
+    });
+
+    const overlay = new MapboxOverlay({
+      interleaved: false,
+      layers: [],
+    });
+
+    map.addControl(overlay as unknown as maplibregl.IControl);
+
+    mapRef.current = map;
+    overlayRef.current = overlay;
+
+    return () => {
+      overlay.finalize();
+      map.remove();
+      mapRef.current = null;
+      overlayRef.current = null;
+    };
+  }, []);
+
+  // Synchronize layers with Deck.gl overlay
+  useEffect(() => {
+    if (overlayRef.current) {
+      overlayRef.current.setProps({ layers });
+    }
+  }, [layers]);
+
+  // Switch basemap style between Hybrid Satellite and Dark
+  const toggleMapStyle = (mode: 'hybrid' | 'dark') => {
+    setMapStyleMode(mode);
+    if (mapRef.current) {
+      mapRef.current.setStyle(MAP_STYLES[mode]);
+    }
+  };
+
+  return (
+    <>
+      {/* MapLibre Container (absolute full-screen) */}
+      <div ref={mapContainer} className="absolute inset-0 w-screen h-screen z-0" />
+
+      {/* Floating Basemap Style Switcher (Top Right) */}
+      <div className="fixed top-4 right-[360px] z-30 pointer-events-auto">
+        <div className="bg-black/75 backdrop-blur-xl border border-white/10 rounded-full p-1 flex items-center gap-1 shadow-2xl">
+          <button
+            onClick={() => toggleMapStyle('hybrid')}
+            className={`px-3 py-1 rounded-full text-[11px] font-medium flex items-center gap-1.5 transition-all ${
+              mapStyleMode === 'hybrid'
+                ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg'
+                : 'text-white/50 hover:text-white'
+            }`}
+          >
+            <Satellite className="w-3.5 h-3.5" />
+            <span>Satellite Hybrid</span>
+          </button>
+          <button
+            onClick={() => toggleMapStyle('dark')}
+            className={`px-3 py-1 rounded-full text-[11px] font-medium flex items-center gap-1.5 transition-all ${
+              mapStyleMode === 'dark'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg'
+                : 'text-white/50 hover:text-white'
+            }`}
+          >
+            <Moon className="w-3.5 h-3.5" />
+            <span>Dark Vector</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Hover HUD - Custom Trailing Dark-Mode Tooltip */}
+      {hoverInfo && (
+        <div
+          className="fixed z-50 pointer-events-none transform -translate-y-full mb-3 transition-transform duration-75"
+          style={{
+            left: hoverInfo.x + 16,
+            top: hoverInfo.y - 12,
+          }}
+        >
+          <div className="bg-black/90 backdrop-blur-xl border border-white/15 rounded-xl px-4 py-3 shadow-2xl min-w-[270px]">
+            <div className="flex items-center gap-2 mb-2 pb-1.5 border-b border-white/10">
+              <div
+                className="w-2.5 h-2.5 rounded-full animate-pulse"
+                style={{
+                  backgroundColor:
+                    hoverInfo.grid.risk_level === 'CRITICAL'
+                      ? '#ff3320'
+                      : hoverInfo.grid.risk_level === 'HIGH'
+                        ? '#ff8c00'
+                        : hoverInfo.grid.risk_level === 'MITIGATED'
+                          ? '#00dc50'
+                          : '#ffb800',
+                }}
+              />
+              <span className="text-white font-semibold text-sm tracking-wide">
+                {hoverInfo.grid.name}
+              </span>
+              <span
+                className="ml-auto text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-full"
+                style={{
+                  backgroundColor:
+                    hoverInfo.grid.risk_level === 'CRITICAL'
+                      ? '#ff332030'
+                      : hoverInfo.grid.risk_level === 'HIGH'
+                        ? '#ff8c0030'
+                        : hoverInfo.grid.risk_level === 'MITIGATED'
+                          ? '#00dc5030'
+                          : '#ffb80030',
+                  color:
+                    hoverInfo.grid.risk_level === 'CRITICAL'
+                      ? '#ff5540'
+                      : hoverInfo.grid.risk_level === 'HIGH'
+                        ? '#ffa030'
+                        : hoverInfo.grid.risk_level === 'MITIGATED'
+                          ? '#40ff80'
+                          : '#ffc840',
+                }}
+              >
+                {hoverInfo.grid.risk_level}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px] text-white/70">
+              <span>📍 <span className="font-mono">{hoverInfo.grid.centroid[1].toFixed(3)}°N, {hoverInfo.grid.centroid[0].toFixed(3)}°E</span></span>
+              <span>🔥 Risk: <span className="text-white font-mono font-bold">{(hoverInfo.grid.risk_score * 100).toFixed(0)}%</span></span>
+              <span className="col-span-2">🕐 Burn Window: <span className="text-amber-400 font-mono font-medium">{hoverInfo.grid.burn_window}</span></span>
+              <span>💨 Wind: <span className="text-white font-mono">{hoverInfo.grid.wind_speed_kmh} km/h</span></span>
+              <span>🌡️ Temp: <span className="text-white font-mono">{hoverInfo.grid.temperature_c}°C</span></span>
+              <span>🫁 AQI Now: <span className="text-white font-mono">{hoverInfo.grid.aqi_current}</span></span>
+              <span>⚠️ AQI +48h: <span className="text-red-400 font-mono font-bold">{hoverInfo.grid.aqi_predicted_48h}</span></span>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
